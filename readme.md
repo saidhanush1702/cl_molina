@@ -38,15 +38,64 @@ README.md
 
 ------------------------------------------------------------------------
 
-# 1️⃣ Database Setup
+# 🗄️ MySQL Database Setup (Using MySQL Workbench)
 
-## Step 1: Create Database
+## Step 1: Open MySQL Workbench
 
-Open MySQL Workbench or MySQL terminal and run:
+-   Open MySQL Workbench\
+-   Connect to your local MySQL server (usually
+    `Local instance MySQL80`)
 
-``` sql
-CREATE DATABASE erp_molina_test;
-```
+------------------------------------------------------------------------
+
+## Step 2: Create a New Database
+
+1.  Go to Navigator → Schemas\
+2.  Right click → Create Schema\
+3.  Enter:
+
+small_business_db
+
+4.  Click Apply\
+5.  Click Apply again\
+6.  Click Finish
+
+------------------------------------------------------------------------
+
+## Step 3: Verify Database
+
+Run this query inside Workbench:
+
+SHOW DATABASES;
+
+You should see:
+
+small_business_db
+
+------------------------------------------------------------------------
+
+# ⚙️ Environment Configuration
+
+Create a `.env` file in the root folder of the project and add:
+
+DB_HOST=localhost
+DB_USER=root
+DB_PASS=your_mysql_password
+DB_NAME=small_business_db
+PORT=5000
+
+### 🔎 Variable Explanation
+
+  Variable   Value
+  ---------- -----------------------------------------
+  DB_HOST    localhost
+  DB_USER    root (default)
+  DB_PASS    Password you set while installing MySQL
+  DB_NAME    small_business_db
+
+⚠️ Do NOT push `.env` file to GitHub.\
+Make sure `.env` is added in `.gitignore`.
+
 
 ------------------------------------------------------------------------
 
