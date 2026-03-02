@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* =========================================
+       1. TYPOGRAPHY
+       ========================================= */
+    --font-primary: 'Inter', system-ui, -apple-system, sans-serif;
+    
+    /* Font Sizes */
+    --text-xs: 0.75rem;   /* 12px */
+    --text-sm: 0.875rem;  /* 14px */
+    --text-base: 1rem;    /* 16px */
+    --text-lg: 1.125rem;  /* 18px */
+    --text-xl: 1.25rem;   /* 20px */
+    --text-2xl: 1.5rem;   /* 24px */
+
+    /* Font Weights */
+    --font-light: 300;
+    --font-regular: 400;
+    --font-medium: 500;
+    --font-bold: 700;
+
+    /* =========================================
+       2. Z-INDEX HIERARCHY
+       ========================================= */
+    --z-base: 1;
+    --z-header: 50;
+    --z-modal: 100;
+    --z-tooltip: 200;
+
+    /* =========================================
+       3. SHADOWS & RADIUSES
+       ========================================= */
+    /* Border Radiuses */
+    --radius-sharp: 0px;
+    --radius-sm: 0.25rem;   /* 4px - Subtle rounding */
+    --radius-md: 0.5rem;    /* 8px - Standard inputs/buttons */
+    --radius-lg: 1rem;      /* 16px - Cards/Modals */
+    --radius-pill: 9999px;  /* Fully rounded buttons/badges */
+
+    /* Box Shadows */
+    --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-elevated: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-floating: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+    /* =========================================
+       4. COLOR PALETTES (Light Mode / Base)
+       ========================================= */
+       
+    /* A. Brand Colors (Static across modes) */
+    --brand-primary: #FFA118;       /* Primary Yellow/Orange */
+    --brand-primary-text: #242424;  /* Dark text */
+
+    /* B. Semantic Colors (Success, Error, Warning, Info) */
+    --semantic-success: #10B981; /* Green */
+    --semantic-error: #EF4444;   /* Red */
+    --semantic-warning: #F59E0B; /* Yellow */
+    --semantic-info: #3B82F6;    /* Blue */
+
+    /* C. Neutral Colors / Backgrounds */
+    --bg-app: #F6F3EC;         /* Main application background */
+    --bg-sidebar: #D9D1C5;     /* Sidebar & Header background */
+    --bg-surface: #FFFFFF;     /* Cards and Modals background */
+    
+    --text-main: #1F2937;    
+    --text-muted: #6B7280;   
+    
+    --border-subtle: #C9C2B6; 
+
+    /* D. Component Specific Colors */
+    --input-bg: #EEF4F8;          
+    --input-text: #1F2937;        
+    --input-placeholder: #9CA3AF; 
+    
+    --icon-bg: #FDF4EA;      
+    --icon-color: #D97706;   
+  }
+
+  /* =========================================
+     DARK MODE OVERRIDES
+     ========================================= */
+  .dark {
+    /* Neutral Colors / Backgrounds */
+    --bg-app: #121212;       
+    --bg-sidebar: #1A1A1A;   
+    --bg-surface: #262626;   
+    
+    --text-main: #F9FAFB;    
+    --text-muted: #9CA3AF;   
+    
+    --border-subtle: #333333;
+
+    /* Component Specific Colors */
+    --input-bg: #242424;          
+    --input-text: #FFFFFF;        
+    --input-placeholder: #6B7280; 
+    
+    --icon-bg: #3F2C1D;
+    --icon-color: #FBBF24;
+
+    /* Shadows need to be darker in dark mode to show depth */
+    --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+    --shadow-elevated: 0 4px 6px -1px rgba(0, 0, 0, 0.6), 0 2px 4px -1px rgba(0, 0, 0, 0.4);
+    --shadow-floating: 0 20px 25px -5px rgba(0, 0, 0, 0.7), 0 10px 10px -5px rgba(0, 0, 0, 0.5);
+  }
+
+  body {
+    font-family: var(--font-primary);
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+}
