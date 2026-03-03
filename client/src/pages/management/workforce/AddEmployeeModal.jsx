@@ -207,7 +207,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onRefresh }) => {
 
             {step === 5 && (
                 <div className="space-y-4 max-w-md mx-auto py-6">
-                    <FormInput label="Professional Work Email (Login)*" type="email" value={formData.auth.email} onChange={v => setFormData({...formData, auth: {...formData.auth, email: v}})} />
+                    <FormInput label="Personal Email (Login)*" type="email" value={formData.auth.email} onChange={v => setFormData({...formData, auth: {...formData.auth, email: v}})} />
                     <div className="space-y-1">
                         <div className="flex justify-between items-center">
                             <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">Password*</label>
@@ -228,9 +228,8 @@ const AddEmployeeModal = ({ isOpen, onClose, onRefresh }) => {
     );
 };
 
-// ==========================================
-// Strictly Typed CSS Design Token Components
-// ==========================================
+
+
 const FormInput = ({ label, type = "text", value, onChange, placeholder, readOnly = false, min }) => (
     <div className="space-y-1">
         <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">{label}</label>

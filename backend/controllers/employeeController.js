@@ -2,6 +2,8 @@ import pool from '../config/db.js';
 import { v4 as uuidv4 } from 'uuid';
 import { encryptPassword, decryptPassword } from '../utils/crypto.js';
 import { sendWelcomeEmail } from '../utils/mailer.js';
+import fs from 'fs';
+import path from 'path';
 
 export const addEmployee = async (req, res) => {
     const connection = await pool.getConnection();
@@ -306,6 +308,65 @@ export const deleteImmigrationRecord = async (req, res) => {
     try {
         await pool.query(`DELETE FROM employee_immigrations WHERE id = ?`, [immId]);
         res.json({ message: "Immigration record deleted successfully." });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+
+// --- DOCUMENT UPLOAD ---
+export const uploadEmployeeDocument = async (req, res) => {
+    const { empId } = req.params;
+    const uploaderId = req.user.id;
+    const file = req.file;
+
+    if (!file) return res.status(400).json({ message: "No file uploaded" });
+
+    try {
+        const fileUrl = `/uploads/documents/${file.filename}`;
+        const docId = uuidv4();
+        
+        await pool.query(
+            `INSERT INTO employee_documents (id, employee_id, file_name, file_url, file_type, uploaded_by) 
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [docId, empId, file.originalname, fileUrl, file.mimetype, uploaderId]
+        );
+        
+        res.status(201).json({ 
+            message: "Document uploaded successfully", 
+            document: { id: docId, file_name: file.originalname, file_url: fileUrl, file_type: file.mimetype } 
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// --- GET DOCUMENTS ---
+export const getEmployeeDocuments = async (req, res) => {
+    const { empId } = req.params;
+    try {
+        const [docs] = await pool.query(`SELECT * FROM employee_documents WHERE employee_id = ? ORDER BY uploaded_at DESC`, [empId]);
+        res.json(docs);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// --- DELETE DOCUMENT ---
+export const deleteEmployeeDocument = async (req, res) => {
+    const { docId } = req.params;
+    try {
+        const [docs] = await pool.query('SELECT file_url FROM employee_documents WHERE id = ?', [docId]);
+        if (docs.length > 0) {
+            // Remove from local filesystem
+            const filePath = path.join(process.cwd(), docs[0].file_url);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+            // Remove from DB
+            await pool.query('DELETE FROM employee_documents WHERE id = ?', [docId]);
+        }
+        res.json({ message: "Document deleted successfully" });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

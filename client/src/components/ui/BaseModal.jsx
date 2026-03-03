@@ -7,9 +7,10 @@ const BaseModal = ({
     icon, 
     title, 
     subtitle, 
-    headerRight, // Optional centered content
-    footer,      // The buttons at the bottom
-    children     // The scrollable form content
+    headerRight, 
+    footer,      
+    children,    
+    noPadding = false // NEW: Allows content to stretch to edges
 }) => {
     if (!isOpen) return null;
 
@@ -17,10 +18,9 @@ const BaseModal = ({
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity duration-300">
             <div className="bg-[var(--bg-surface)] w-[70vw] h-[90vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden border border-[var(--border-subtle)] transition-colors duration-300">
                 
-                {/* HEADER (Relative container to allow centering) */}
+                {/* HEADER */}
                 <div className="relative px-6 py-4 border-b border-[var(--border-subtle)] flex justify-between items-center bg-[var(--bg-app)] transition-colors duration-300 shrink-0">
                     
-                    {/* Left Side: Icon & Titles */}
                     <div className="flex items-center gap-3">
                         {icon && (
                             <div className="h-8 w-8 bg-[var(--brand-primary)] rounded-xl flex items-center justify-center shadow-sm text-[var(--brand-primary-text)]">
@@ -39,7 +39,6 @@ const BaseModal = ({
                         </div>
                     </div>
 
-                    {/* Middle: Centered Element (e.g. Step Indicator) */}
                     {headerRight && (
                         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex justify-center items-center pointer-events-none">
                             <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] px-4 py-1.5 rounded-full shadow-sm text-[10px] font-bold text-[var(--brand-primary)] uppercase tracking-widest">
@@ -48,14 +47,13 @@ const BaseModal = ({
                         </div>
                     )}
 
-                    {/* Right Side: Close Button */}
                     <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors duration-300">
                         <X size={20} />
                     </button>
                 </div>
 
-                {/* SCROLLABLE BODY */}
-                <div className="flex-1 overflow-y-auto p-8">
+                {/* SCROLLABLE BODY - Adjusted with noPadding prop */}
+                <div className={`flex-1 overflow-y-auto ${noPadding ? '' : 'p-8'}`}>
                     {children}
                 </div>
 

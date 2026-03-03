@@ -2,6 +2,9 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import pool from './config/db.js';
 
 dotenv.config();
@@ -11,18 +14,32 @@ import { createOrganization, toggleOrgStatus, getAllOrganizations } from './cont
 import { verifyToken, isSuperAdmin } from './middleware/auth.js'; 
 import { createHR, getHRs, toggleHRAccess, deleteHR } from './controllers/hrController.js';
 import { addEmployee, getEmployees, updateEmployee, deleteEmployee, terminateEmployee, toggleEmployeeAccess, addImmigrationRecord } from './controllers/employeeController.js';
-import { getNextEmployeeCode, updateImmigrationRecord , deleteImmigrationRecord } from './controllers/employeeController.js';
+import { getNextEmployeeCode, updateImmigrationRecord , deleteImmigrationRecord, uploadEmployeeDocument, getEmployeeDocuments, deleteEmployeeDocument } from './controllers/employeeController.js';
 
 import { createClient, getClients } from './controllers/clientController.js';
 import { updateClient, deleteClient } from './controllers/clientController.js';
 
 import { createPlacement, getPlacements, updatePlacement } from './controllers/placementController.js';
-
 import { getAllLookups } from './controllers/lookupController.js';
+
+// Import the new Multer configuration
+import upload from './middleware/upload.js';
+
+// ES Module fix for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Ensure the folder exists
+const uploadDir = path.join(__dirname, 'uploads', 'documents');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 
 
 const app = express();
 
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(cors({
     origin: process.env.CLIENT_ORIGIN, 
     credentials: true,              
@@ -64,6 +81,11 @@ app.get('/api/management/employees/next-code', verifyToken, getNextEmployeeCode)
 app.post('/api/management/employees/:empId/immigration', verifyToken, addImmigrationRecord);
 app.put('/api/management/employees/immigration/:immId', verifyToken, updateImmigrationRecord);
 app.delete('/api/management/employees/immigration/:immId', verifyToken, deleteImmigrationRecord);
+
+// Employee Document Routes
+app.post('/api/management/employees/:empId/documents', [verifyToken, upload.single('document')], uploadEmployeeDocument);
+app.get('/api/management/employees/:empId/documents', verifyToken, getEmployeeDocuments);
+app.delete('/api/management/employees/documents/:docId', verifyToken, deleteEmployeeDocument);
 
 
 app.get('/api/management/clients', verifyToken, getClients);

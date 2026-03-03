@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Edit3, User, Briefcase, Mail, Fingerprint, Trash2, AlertTriangle, Lock, Unlock, Plus, Plane, Eye, EyeOff, X } from 'lucide-react';
+import { Save, Edit3, User, Briefcase, Mail, Fingerprint, Trash2, AlertTriangle, Lock, Unlock, Plus, Plane, Eye, EyeOff, X, FileText } from 'lucide-react';
 import { managementAPI, commonAPI } from '../../../api/apiService';
 import BaseModal from '../../../components/ui/BaseModal';
+import DocumentViewerModal from './DocumentViewerModal';
 
 const getSafeImmigrations = (raw) => {
     if (!raw) return [];
@@ -45,6 +46,9 @@ const EmployeeDetailModal = ({ employee, onClose, onRefresh }) => {
 
     // Credentials State
     const [showPassword, setShowPassword] = useState(false);
+
+    // Document Vault State
+    const [showDocuments, setShowDocuments] = useState(false);
 
     const [editData, setEditData] = useState({ ...employee });
     const userRole = localStorage.getItem('userRole');
@@ -226,7 +230,7 @@ const EmployeeDetailModal = ({ employee, onClose, onRefresh }) => {
             }
             footer={modalFooter}
         >
-            <div className="space-y-4"> 
+            <div className="space-y-4 -mt-4"> 
                 {/* Personal Section */}
                 <div className="space-y-2">
                     <SectionHeader icon={<User size={12} />} title="Personal & Demographic" />
@@ -248,7 +252,7 @@ const EmployeeDetailModal = ({ employee, onClose, onRefresh }) => {
                         <Field label="Employment Type" value={isEditing ? editData.employee_type_id : editData.employee_type_name} edit={isEditing} isSelect isObject options={lookups.employeeTypes} onChange={v => setEditData({ ...editData, employee_type_id: v })} />
                         <Field label="Joining Date" type="date" value={safeDate(editData.joining_date)} edit={isEditing} onChange={v => setEditData({ ...editData, joining_date: v })} />
                         <div className="col-span-2">
-                            <Field label="SSN (Encrypted)" value={editData.ssn} edit={isEditing} type="ssn" onChange={v => setEditData({ ...editData, ssn: v })} />
+                            <Field label="SSN" value={editData.ssn} edit={isEditing} type="ssn" onChange={v => setEditData({ ...editData, ssn: v })} />
                         </div>
                     </div>
                 </div>
@@ -261,6 +265,25 @@ const EmployeeDetailModal = ({ employee, onClose, onRefresh }) => {
                         <Field label="Phone Number" value={editData.phone_number} edit={isEditing} onChange={v => setEditData({ ...editData, phone_number: v })} />
                         <Field label="Country of Origin" value={isEditing ? editData.country_id : editData.country_name} edit={isEditing} isSelect isObject options={lookups.countries} onChange={v => setEditData({ ...editData, country_id: v })} />
                         <Field label="E-Verify Code" value={editData.e_verification_code} edit={isEditing} onChange={v => setEditData({ ...editData, e_verification_code: v })} />
+                    </div>
+                </div>
+
+                {/* Document Vault Section */}
+                <div className="space-y-2">
+                    <SectionHeader icon={<FileText size={12} />} title="Document Vault" />
+                    <div className="grid grid-cols-4 gap-2 bg-[var(--bg-app)]/50 p-2 rounded-xl border border-[var(--border-subtle)]">
+                        <div className="col-span-3 flex flex-col justify-center px-1">
+                            <p className="text-[11px] font-bold text-[var(--text-main)] truncate transition-colors duration-300">Manage Employee Files</p>
+                            <label className="text-[8px] font-bold text-[var(--text-muted)] uppercase tracking-wider transition-colors duration-300 mt-0.5">Upload IDs, Resumes, and Onboarding documents</label>
+                        </div>
+                        <div className="col-span-1 flex items-center justify-end">
+                            <button 
+                                onClick={() => setShowDocuments(true)} 
+                                className="w-full flex items-center justify-center gap-2 bg-[var(--brand-primary)] text-[var(--brand-primary-text)] px-4 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest shadow-sm hover:opacity-90 transition-all active:scale-95 outline-none"
+                            >
+                                <FileText size={12} /> Open Vault
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -346,7 +369,7 @@ const EmployeeDetailModal = ({ employee, onClose, onRefresh }) => {
                 </div>
 
                 {/* Credentials Section */}
-                <div className="space-y-2 pt-2 border-t border-[var(--border-subtle)]">
+                <div className="space-y-2">
                     <SectionHeader icon={<Lock size={12} />} title="System Credentials (Read-Only)" />
                     <div className="grid grid-cols-4 gap-2 bg-[var(--bg-app)]/50 p-2 rounded-xl border border-[var(--border-subtle)]">
                         <div className="col-span-2">
@@ -355,8 +378,6 @@ const EmployeeDetailModal = ({ employee, onClose, onRefresh }) => {
                         <div className="col-span-2">
                             <div className="space-y-0.5">
                                 <label className="text-[8px] font-bold text-[var(--text-muted)] uppercase tracking-wider ml-1 transition-colors duration-300">Password</label>
-                                
-                                {/* UPDATED: Replaced justify-between with items-center gap-2, removed text inside button */}
                                 <div className="flex items-center gap-2 px-1">
                                     <p className="text-[11px] font-bold text-[var(--text-main)] truncate transition-colors duration-300">
                                         {!showPassword ? '••••••••••••' : (employee.plain_password || 'Password Encrypted / Hidden')}
@@ -376,6 +397,14 @@ const EmployeeDetailModal = ({ employee, onClose, onRefresh }) => {
                 </div>
 
             </div>
+
+            {/* Document Vault Modal conditionally rendered outside the main flow but inside BaseModal's context */}
+            {showDocuments && (
+                <DocumentViewerModal 
+                    employee={employee} 
+                    onClose={() => setShowDocuments(false)} 
+                />
+            )}
         </BaseModal>
     );
 };
