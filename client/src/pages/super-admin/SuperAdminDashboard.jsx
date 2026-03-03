@@ -4,16 +4,9 @@ import api from '../../api/axios';
 
 const SuperAdminDashboard = () => {
     const [stats, setStats] = useState({ totalOrgs: 0, totalUsers: 0, activeSessions: 0, systemHealth: 'Healthy' });
-    const [loading, setLoading] = useState(true);
+    
 
-    useEffect(() => {
-        const fetchStats = async () => {
-            try { const res = await api.get('/api/super-admin/stats'); setStats(res.data); } 
-            catch (err) { console.error(err); }
-            finally { setLoading(false); }
-        };
-        fetchStats();
-    }, []);
+    
 
     const cards = [
         { label: 'Total Organizations', value: stats.totalOrgs, icon: Building2 },
@@ -38,7 +31,7 @@ const SuperAdminDashboard = () => {
                             </div>
                         </div>
                         <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest transition-colors">{card.label}</p>
-                        <p className="text-3xl font-bold text-[var(--text-main)] mt-1 transition-colors">{loading ? '...' : card.value}</p>
+                        <p className="text-3xl font-bold text-[var(--text-main)] mt-1 transition-colors">{card.value}</p>
                     </div>
                 ))}
             </div>

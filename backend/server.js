@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import pool from './config/db.js';
 
 dotenv.config();
-
+ 
 import { login , logout, forgotPassword, verifyResetCode, resetPassword } from './controllers/authController.js';
 import { createOrganization, toggleOrgStatus, getAllOrganizations } from './controllers/orgController.js';
 import { verifyToken, isSuperAdmin } from './middleware/auth.js'; 
