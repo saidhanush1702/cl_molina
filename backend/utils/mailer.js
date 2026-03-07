@@ -27,13 +27,13 @@ export const sendWelcomeEmail = async (toEmail, tempPassword, orgName) => {
         subject: `Login Credentials for ${orgName}`,
         html: `
             <div style="font-family: sans-serif; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-                <h2 style="color: #4f46e5;">Welcome to the Platform</h2>
-                <p>An administrator account has been created for <b>${orgName}</b>.</p>
+                <h2 style="color: #4f46e5;">Welcome to the Business Operations Platform by Molinatek !</h2>
+                <p>An administrator account has been created for your organization <b>${orgName}</b>.</p>
                 <div style="background: #f3f4f6; padding: 15px; border-radius: 4px; margin: 20px 0;">
                     <p style="margin: 0;"><strong>Email:</strong> ${toEmail}</p>
                     <p style="margin: 5px 0 0 0;"><strong>Temporary Password:</strong> <code style="color: #ef4444;">${tempPassword}</code></p>
                 </div>
-                <p style="font-size: 0.875rem; color: #6b7280;">Please log in and update your password immediately.</p>
+                <p style="font-size: 0.875rem; color: #6b7280;">Please log in and update your password immediately for security reasons.</p>
             </div>
         `
     };
