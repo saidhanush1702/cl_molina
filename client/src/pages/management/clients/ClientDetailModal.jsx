@@ -159,24 +159,24 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
     if (!client) return null;
 
     const modalFooter = (
-        <div className="flex flex-col w-full gap-3">
+        <div className="flex flex-col w-full gap-2">
             {submitError && (
-                <div className="w-full bg-red-500/10 border border-red-500/30 text-red-600 px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+                <div className="w-full bg-red-500/10 border border-red-500/30 text-red-600 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
                     <AlertTriangle size={14} className="shrink-0" />
                     <span>{submitError}</span>
                 </div>
             )}
             <div className="flex justify-between items-center w-full">
                 {userRole === 'ORG_ADMIN' ? (
-                    <button onClick={handleDelete} className="flex items-center gap-2 text-[var(--text-muted)] hover:text-red-500 transition-all text-[10px] font-bold uppercase px-4 py-2 rounded-xl outline-none">
-                        <Trash2 size={16} /> Delete Client
+                    <button onClick={handleDelete} className="flex items-center gap-2 text-[var(--text-muted)] hover:text-red-500 transition-all text-[10px] font-bold uppercase px-3 py-1.5 rounded-xl outline-none">
+                        <Trash2 size={14} /> Delete Client
                     </button>
                 ) : <div></div>}
                 
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                     {!isEditing ? (
-                        <button onClick={() => setIsEditing(true)} className="bg-[var(--brand-primary)] text-[var(--brand-primary-text)] px-8 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 shadow-lg hover:opacity-90 focus:ring-4 focus:ring-[var(--brand-primary)]/50 outline-none active:scale-95 transition-all">
-                            <Edit3 size={16} /> Edit Profile
+                        <button onClick={() => setIsEditing(true)} className="bg-[var(--brand-primary)] text-[var(--brand-primary-text)] px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 shadow-sm hover:opacity-90 active:scale-95 transition-all outline-none">
+                            <Edit3 size={14} /> Edit Profile
                         </button>
                     ) : (
                         <>
@@ -190,12 +190,12 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
                                         contacts: getSafeContacts(client?.contacts) 
                                     });
                                 }} 
-                                className="px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors outline-none"
+                                className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors outline-none"
                             >
                                 Cancel
                             </button>
-                            <button onClick={handleSave} className="bg-[var(--brand-primary)] text-[var(--brand-primary-text)] px-8 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 shadow-lg hover:opacity-90 focus:ring-4 focus:ring-[var(--brand-primary)]/50 outline-none active:scale-95 transition-all">
-                                <Save size={16} /> Save Changes
+                            <button onClick={handleSave} className="bg-[var(--brand-primary)] text-[var(--brand-primary-text)] px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 shadow-sm hover:opacity-90 active:scale-95 transition-all outline-none">
+                                <Save size={14} /> Save Changes
                             </button>
                         </>
                     )}
@@ -213,10 +213,10 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
             subtitle="View and edit client details and contacts"
             footer={modalFooter}
         >
-            <div className="space-y-6">
+            <div className="space-y-4">
                 
-                {/* Main Details */}
-                <div className="grid grid-cols-2 gap-4 bg-[var(--bg-app)]/50 p-5 rounded-2xl border border-[var(--border-subtle)]">
+                {/* Main Details - HIGH DENSITY GRID (4 Columns) */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 bg-[var(--bg-app)]/50 p-4 rounded-xl border border-[var(--border-subtle)]">
                     <ClientField 
                         label="Client / Company Name*" 
                         icon={<Building2 size={14}/>} 
@@ -252,8 +252,8 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
                 </div>
 
                 {/* Contacts Section */}
-                <div className="pt-2">
-                    <div className="flex justify-between items-center mb-4">
+                <div className="pt-1">
+                    <div className="flex justify-between items-center mb-3">
                         <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
                             Points of Contact
                         </p>
@@ -261,7 +261,7 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
                             <button 
                                 type="button" 
                                 onClick={addContact}
-                                className="flex items-center gap-1.5 text-[9px] font-bold text-[var(--brand-primary)] uppercase tracking-widest hover:opacity-80 active:scale-95 transition-all bg-[var(--brand-primary)]/10 px-3 py-1.5 rounded-lg outline-none"
+                                className="flex items-center gap-1 text-[9px] font-bold text-[var(--brand-primary)] uppercase tracking-widest hover:opacity-80 active:scale-95 transition-all bg-[var(--brand-primary)]/10 px-2 py-1.5 rounded-lg outline-none"
                             >
                                 <Plus size={12} /> Add Contact
                             </button>
@@ -269,16 +269,16 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
                     </div>
 
                     {/* Contacts List */}
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         {editData.contacts?.length === 0 && !isEditing && (
                             <p className="text-xs text-[var(--text-muted)] italic px-2">No contacts registered.</p>
                         )}
                         
                         {editData.contacts?.map((contact, index) => (
-                            <div key={index} className={`relative p-4 rounded-xl border border-[var(--border-subtle)] transition-colors duration-300 ${isEditing ? 'bg-[var(--bg-app)]/50' : 'bg-transparent'}`}>
+                            <div key={index} className={`relative p-3 rounded-xl border border-[var(--border-subtle)] transition-colors duration-300 ${isEditing ? 'bg-[var(--bg-app)]/50' : 'bg-transparent'}`}>
                                 
                                 {/* Contact Header Controls */}
-                                <div className="flex justify-between items-center mb-3 pb-2 border-b border-[var(--border-subtle)]">
+                                <div className="flex justify-between items-center mb-2 pb-2 border-b border-[var(--border-subtle)]">
                                     {isEditing ? (
                                         <button 
                                             type="button"
@@ -293,13 +293,13 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
                                             {contact.is_primary ? "Primary Contact" : "Make Primary"}
                                         </button>
                                     ) : (
-                                        <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider">
+                                        <div className="flex items-center gap-1.5 text-[9px] uppercase font-bold tracking-wider">
                                             {contact.is_primary ? (
-                                                <span className="flex items-center gap-1.5 text-yellow-500 bg-yellow-500/10 px-3 py-1.5 rounded-md">
-                                                    <Star size={12} className="fill-yellow-500" /> Primary Contact
+                                                <span className="flex items-center gap-1 text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded-md">
+                                                    <Star size={10} className="fill-yellow-500" /> Primary Contact
                                                 </span>
                                             ) : (
-                                                <span className="text-[var(--text-muted)] px-2">Additional Contact</span>
+                                                <span className="text-[var(--text-muted)] px-1">Additional Contact</span>
                                             )}
                                         </div>
                                     )}
@@ -308,7 +308,7 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
                                         <button 
                                             type="button"
                                             onClick={() => removeContact(index)}
-                                            className="text-[var(--text-muted)] hover:text-red-500 p-1.5 hover:bg-red-500/10 rounded-md transition-colors flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest outline-none"
+                                            className="text-[var(--text-muted)] hover:text-red-500 p-1 hover:bg-red-500/10 rounded-md transition-colors flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest outline-none"
                                             title="Remove Contact"
                                         >
                                             <Trash2 size={12} /> Remove
@@ -316,8 +316,8 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
                                     )}
                                 </div>
 
-                                {/* Contact Fields Grid */}
-                                <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+                                {/* Contact Fields Grid - HIGH DENSITY GRID (5 Columns) */}
+                                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                                     <ClientField 
                                         label="Contact Name*" 
                                         icon={<User size={14}/>}
@@ -388,7 +388,7 @@ const ClientField = ({ label, icon, value, edit, onChange, type = "text", placeh
                     type={type}
                     placeholder={placeholder}
                     maxLength={type === "email" ? undefined : maxLength}
-                    className={`w-full py-1.5 px-3 bg-[var(--input-bg)] text-[var(--input-text)] border rounded-lg text-xs font-bold outline-none transition-all placeholder:font-normal placeholder:text-[var(--text-muted)] ${
+                    className={`w-full py-1.5 px-2 bg-[var(--input-bg)] text-[var(--input-text)] border rounded-lg text-xs font-bold outline-none transition-all placeholder:font-normal placeholder:text-[var(--text-muted)] ${
                         error 
                         ? 'border-red-500 focus:ring-1 focus:ring-red-500 focus:border-red-500' 
                         : 'border-[var(--border-subtle)] focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]'
@@ -396,12 +396,12 @@ const ClientField = ({ label, icon, value, edit, onChange, type = "text", placeh
                     value={value || ''} 
                     onChange={e => onChange && onChange(e.target.value)} 
                 />
-                {error && <p className="text-[10px] text-red-500 font-semibold ml-1 leading-tight">{error}</p>}
+                {error && <p className="text-[9px] text-red-500 font-semibold ml-1 leading-tight">{error}</p>}
             </>
         ) : (
-            <div className="flex items-center gap-2 px-1 py-1.5">
-                <span className="text-[var(--text-muted)]">{icon}</span>
-                <p className="text-sm font-bold text-[var(--text-main)] truncate transition-colors duration-300">
+            <div className="flex items-center gap-1.5 px-1 py-1">
+                <span className="text-[var(--text-muted)] shrink-0">{icon}</span>
+                <p className="text-xs font-bold text-[var(--text-main)] truncate transition-colors duration-300">
                     {value || '---'}
                 </p>
             </div>
@@ -418,7 +418,7 @@ const ClientSelectField = ({ label, icon, value, displayValue, edit, onChange, o
         {edit ? (
             <>
                 <select 
-                    className={`w-full py-1.5 px-3 bg-[var(--input-bg)] text-[var(--input-text)] border rounded-lg text-xs font-bold outline-none transition-all ${
+                    className={`w-full py-1.5 px-2 bg-[var(--input-bg)] text-[var(--input-text)] border rounded-lg text-xs font-bold outline-none transition-all ${
                         error 
                         ? 'border-red-500 focus:ring-1 focus:ring-red-500 focus:border-red-500' 
                         : 'border-[var(--border-subtle)] focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]'
@@ -426,17 +426,17 @@ const ClientSelectField = ({ label, icon, value, displayValue, edit, onChange, o
                     value={value || ''} 
                     onChange={e => onChange && onChange(e.target.value)}
                 >
-                    <option value="" disabled className="text-[var(--input-placeholder)]">Select Type...</option>
+                    <option value="" disabled className="text-[var(--input-placeholder)]">Select...</option>
                     {options.map(opt => (
                         <option key={opt.id} value={opt.id}>{opt.name}</option>
                     ))}
                 </select>
-                {error && <p className="text-[10px] text-red-500 font-semibold ml-1 leading-tight">{error}</p>}
+                {error && <p className="text-[9px] text-red-500 font-semibold ml-1 leading-tight">{error}</p>}
             </>
         ) : (
-            <div className="flex items-center gap-2 px-1 py-1.5">
-                <span className="text-[var(--text-muted)]">{icon}</span>
-                <p className="text-sm font-bold text-[var(--text-main)] truncate transition-colors duration-300">
+            <div className="flex items-center gap-1.5 px-1 py-1">
+                <span className="text-[var(--text-muted)] shrink-0">{icon}</span>
+                <p className="text-xs font-bold text-[var(--text-main)] truncate transition-colors duration-300">
                     {displayValue || '---'}
                 </p>
             </div>
