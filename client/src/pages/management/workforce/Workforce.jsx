@@ -70,27 +70,33 @@ const Workforce = () => {
         fetchLookups();
     }, []);
 
-    // Filter Logic
-    const filteredEmployees = employees.filter(emp => {
-        // 1. STRICT ROLE CHECK: Only show "EMPLOYEE" roles on this page
+    // 1. Base Filter (Applies Search, Country, Pay Type, and Role, but NOT Status)
+    const baseFilteredEmployees = employees.filter(emp => {
         if (emp.role !== 'EMPLOYEE') return false;
 
-        const isActive = emp.is_active === 1 || emp.is_active === true;
-
-        // 2. Status Filter
-        if (filterStatus === 'ACTIVE' && !isActive) return false;
-        if (filterStatus === 'TERMINATED' && isActive) return false;
-
-        // 3. Pay Type & Country Filter (using IDs from lookups)
         if (filterPayType !== 'ALL' && String(emp.pay_type_id) !== String(filterPayType)) return false;
         if (filterCountry !== 'ALL' && String(emp.country_id) !== String(filterCountry)) return false;
 
-        // 4. Search Filter
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
             const fullName = `${emp.first_name} ${emp.last_name}`.toLowerCase();
             return fullName.includes(query) || emp.employee_code?.toLowerCase().includes(query);
         }
+        return true;
+    });
+
+    // 2. Calculate Counts dynamically based on the other active filters
+    const tabCounts = {
+        ALL: baseFilteredEmployees.length,
+        ACTIVE: baseFilteredEmployees.filter(emp => emp.is_active === 1 || emp.is_active === true).length,
+        TERMINATED: baseFilteredEmployees.filter(emp => emp.is_active !== 1 && emp.is_active !== true).length
+    };
+
+    // 3. Final Filter (Applies Status on top of Base Filters for the Table)
+    const filteredEmployees = baseFilteredEmployees.filter(emp => {
+        const isActive = emp.is_active === 1 || emp.is_active === true;
+        if (filterStatus === 'ACTIVE' && !isActive) return false;
+        if (filterStatus === 'TERMINATED' && isActive) return false;
         return true;
     });
 
@@ -126,18 +132,26 @@ const Workforce = () => {
                 {/* Filters Toolbar */}
                 <div className="px-6 py-3 border-b border-[var(--border-subtle)] bg-[var(--bg-app)]/30 flex flex-col xl:flex-row justify-between items-center gap-4 shrink-0">
 
-                    {/* Tabs */}
+                    {/* Tabs with Dynamic Counts */}
                     <div className="flex p-1 bg-[var(--bg-app)] rounded-lg border border-[var(--border-subtle)] w-full xl:w-auto shadow-sm shrink-0">
                         {['ALL', 'ACTIVE', 'TERMINATED'].map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setFilterStatus(tab)}
-                                className={`flex-1 xl:flex-none px-4 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${filterStatus === tab
-                                    ? 'bg-[var(--bg-surface)] text-[var(--brand-primary)] shadow-sm'
-                                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                                    }`}
+                                className={`flex-1 xl:flex-none px-4 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 ${
+                                    filterStatus === tab
+                                        ? 'bg-[var(--bg-surface)] text-[var(--brand-primary)] shadow-sm'
+                                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                                }`}
                             >
                                 {tab}
+                                <span className={`px-1.5 py-0.5 rounded-md text-[9px] leading-none transition-colors ${
+                                    filterStatus === tab
+                                        ? 'bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]'
+                                        : 'bg-[var(--border-subtle)] text-[var(--text-muted)]'
+                                }`}>
+                                    {tabCounts[tab]}
+                                </span>
                             </button>
                         ))}
                     </div>

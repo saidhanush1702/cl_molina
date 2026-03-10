@@ -14,10 +14,10 @@ export const addEmployee = async (req, res) => {
         const creatorId = req.user.id;
 
         const userId = uuidv4();
-        
+
         // Changed from bcrypt to AES Encryption
         const hashedPw = encryptPassword(auth.password);
-        
+
         await connection.query(
             `INSERT INTO users (id, organization_id, email, password_hash, role, created_by, updated_by) 
              VALUES (?, ?, ?, ?, 'EMPLOYEE', ?, ?)`,
@@ -25,20 +25,21 @@ export const addEmployee = async (req, res) => {
         );
 
         const employeeId = uuidv4();
+        
         const profileQuery = `
             INSERT INTO employees (
                 id, organization_id, user_id, first_name, last_name,
-                birth_date, gender_id, marital_status, title,
+                birth_date, gender_id, marital_status_id, title,
                 employee_code, employee_type_id, 
-                ssn, joining_date, personal_email, phone_number, country_id, 
+                ssn, joining_date, personal_email, phone_code_id, phone_number, country_id, 
                 e_verification_code, created_by, updated_by
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
 
         const values = [
-            employeeId, orgId, userId, profile.first_name, profile.last_name, 
-            profile.birth_date || null, profile.gender_id || null, profile.marital_status, profile.title,
-            profile.employee_code, profile.employee_type_id || null, 
-            profile.ssn, profile.joining_date, profile.personal_email, profile.phone_number, profile.country_id || null,
+            employeeId, orgId, userId, profile.first_name, profile.last_name,
+            profile.birth_date || null, profile.gender_id || null, profile.marital_status_id || null, profile.title,
+            profile.employee_code, profile.employee_type_id || null,
+            profile.ssn, profile.joining_date, profile.personal_email, profile.phone_code_id || null, profile.phone_number, profile.country_id || null,
             profile.e_verification_code, creatorId, creatorId
         ];
 
@@ -71,8 +72,10 @@ export const getEmployees = async (req, res) => {
                 g.name as gender_name,
                 et.name as employee_type_name,
                 c.name as country_name,
+                ms.name as marital_status_name,
+                pc.dial_code as phone_dial_code,
                 u.id as user_account_id, u.email, u.role, u.is_active,
-                u.password_hash,  -- Added to fetch the encrypted password
+                u.password_hash,
                 (SELECT pt.name 
                  FROM placements p 
                  LEFT JOIN lkp_pay_types pt ON p.pay_type_id = pt.id 
@@ -95,10 +98,12 @@ export const getEmployees = async (req, res) => {
             LEFT JOIN lkp_genders g ON e.gender_id = g.id
             LEFT JOIN lkp_employee_types et ON e.employee_type_id = et.id
             LEFT JOIN lkp_countries c ON e.country_id = c.id
+            LEFT JOIN lkp_marital_statuses ms ON e.marital_status_id = ms.id
+            LEFT JOIN lkp_phone_codes pc ON e.phone_code_id = pc.id
             WHERE u.organization_id = ? AND u.role != 'SUPER_ADMIN'
             ORDER BY u.created_at DESC
         `, [req.user.orgId]);
-        
+
         // Map through the employees to attach the decrypted password
         const formattedEmployees = employees.map(emp => {
             return {
@@ -113,10 +118,41 @@ export const getEmployees = async (req, res) => {
     }
 };
 
+export const updateEmployee = async (req, res) => {
+    const { id } = req.params;
+    const data = req.body;
+    const orgId = req.user.orgId;
+
+    try {
+        await pool.query(
+            `UPDATE employees SET 
+                first_name=?, last_name=?, birth_date=?, 
+                gender_id=?, marital_status_id=?, title=?, 
+                employee_code=?, employee_type_id=?, 
+                ssn=?, joining_date=?, personal_email=?, phone_code_id=?, phone_number=?, 
+                country_id=?, e_verification_code=?, updated_by=?
+            WHERE id = ? AND organization_id = ?`,
+            [
+                data.first_name || '', data.last_name || '', data.birth_date || null,
+                data.gender_id || null, data.marital_status_id || null, data.title || null,
+                data.employee_code || null, data.employee_type_id || null,
+                data.ssn || null, data.joining_date || null, data.personal_email || null,
+                data.phone_code_id || null, data.phone_number || null,
+                data.country_id || null, data.e_verification_code || null,
+                req.user.id, id, orgId
+            ]
+        );
+        res.json({ message: "Profile synchronized successfully." });
+    } catch (error) {
+        console.error("Backend Update Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
 export const addImmigrationRecord = async (req, res) => {
     const { empId } = req.params;
     const { status_id, start_date, till_date } = req.body;
-    const creatorId = req.user.id; 
+    const creatorId = req.user.id;
     try {
         await pool.query(
             `INSERT INTO employee_immigrations (id, employee_id, status_id, start_date, till_date, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -128,52 +164,12 @@ export const addImmigrationRecord = async (req, res) => {
     }
 };
 
-export const updateEmployee = async (req, res) => {
-    const { id } = req.params;
-    const data = req.body;
-    const orgId = req.user.orgId;
-
-    try {
-        await pool.query(
-            `UPDATE employees SET 
-                first_name=?, last_name=?, birth_date=?, 
-                gender_id=?, marital_status=?, title=?, 
-                employee_code=?, employee_type_id=?, 
-                ssn=?, joining_date=?, personal_email=?, phone_number=?, 
-                country_id=?, e_verification_code=?, updated_by=?
-            WHERE id = ? AND organization_id = ?`,
-            [
-                data.first_name || '', 
-                data.last_name || '', 
-                data.birth_date || null, 
-                data.gender_id || null, 
-                data.marital_status || null, 
-                data.title || null, 
-                data.employee_code || null, 
-                data.employee_type_id || null, 
-                data.ssn || null, 
-                data.joining_date || null, 
-                data.personal_email || null, 
-                data.phone_number || null, 
-                data.country_id || null, 
-                data.e_verification_code || null, 
-                req.user.id, 
-                id, 
-                orgId
-            ]
-        );
-        res.json({ message: "Profile synchronized successfully." });
-    } catch (error) {
-        console.error("Backend Update Error:", error);
-        res.status(500).json({ error: error.message });
-    }
-};
 
 export const updateImmigrationRecord = async (req, res) => {
     const { immId } = req.params;
     const { status_id, start_date, till_date } = req.body;
     const updatedBy = req.user.id;
-    
+
     try {
         await pool.query(
             `UPDATE employee_immigrations 
@@ -189,7 +185,7 @@ export const updateImmigrationRecord = async (req, res) => {
 
 export const deleteEmployee = async (req, res) => {
     const { id } = req.params;
-    const userRole = req.user.role; 
+    const userRole = req.user.role;
 
     try {
         if (userRole !== 'ORG_ADMIN') {
@@ -205,7 +201,7 @@ export const deleteEmployee = async (req, res) => {
 };
 
 export const terminateEmployee = async (req, res) => {
-    const { id } = req.params; 
+    const { id } = req.params;
     const { date, reason } = req.body;
     const orgId = req.user.orgId;
     const userRole = req.user.role;
@@ -246,8 +242,8 @@ export const terminateEmployee = async (req, res) => {
 };
 
 export const toggleEmployeeAccess = async (req, res) => {
-    const { id } = req.params; 
-    const { is_active } = req.body; 
+    const { id } = req.params;
+    const { is_active } = req.body;
     const orgId = req.user.orgId;
 
     if (req.user.role !== 'ORG_ADMIN') {
@@ -271,7 +267,7 @@ export const toggleEmployeeAccess = async (req, res) => {
 export const getNextEmployeeCode = async (req, res) => {
     try {
         const orgId = req.user.orgId;
-        
+
         const [rows] = await pool.query(`
             SELECT employee_code 
             FROM employees 
@@ -304,7 +300,7 @@ export const getNextEmployeeCode = async (req, res) => {
 // --- DELETE IMMIGRATION RECORD ---
 export const deleteImmigrationRecord = async (req, res) => {
     const { immId } = req.params;
-    
+
     try {
         await pool.query(`DELETE FROM employee_immigrations WHERE id = ?`, [immId]);
         res.json({ message: "Immigration record deleted successfully." });
@@ -325,16 +321,16 @@ export const uploadEmployeeDocument = async (req, res) => {
     try {
         const fileUrl = `/uploads/documents/${file.filename}`;
         const docId = uuidv4();
-        
+
         await pool.query(
             `INSERT INTO employee_documents (id, employee_id, file_name, file_url, file_type, uploaded_by) 
              VALUES (?, ?, ?, ?, ?, ?)`,
             [docId, empId, file.originalname, fileUrl, file.mimetype, uploaderId]
         );
-        
-        res.status(201).json({ 
-            message: "Document uploaded successfully", 
-            document: { id: docId, file_name: file.originalname, file_url: fileUrl, file_type: file.mimetype } 
+
+        res.status(201).json({
+            message: "Document uploaded successfully",
+            document: { id: docId, file_name: file.originalname, file_url: fileUrl, file_type: file.mimetype }
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
