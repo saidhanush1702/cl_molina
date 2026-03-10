@@ -13,13 +13,18 @@ const Clients = () => {
         try {
             const res = await managementAPI.getClients();
             setClients(res.data);
-        } catch (err) { console.error("Client fetch error:", err); }
+        } catch (err) { 
+            console.error("Client fetch error:", err); 
+        }
     };
 
-    useEffect(() => { fetchClients(); }, []);
+    useEffect(() => { 
+        fetchClients(); 
+    }, []);
 
     return (
         <div className="max-w-7xl mx-auto flex flex-col h-[calc(100vh-8rem)] gap-4 animate-in fade-in duration-500">
+            
             {/* Header Section (High Density) */}
             <div className="bg-[var(--bg-surface)] px-6 py-4 rounded-2xl border border-[var(--border-subtle)] shadow-sm flex justify-between items-center shrink-0 transition-colors duration-300">
                 <div className="flex items-center gap-3">
@@ -50,10 +55,11 @@ const Clients = () => {
                     <table className="w-full text-left table-fixed">
                         <thead className="bg-[var(--bg-app)] text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest border-b border-[var(--border-subtle)] sticky top-0 z-10 transition-colors duration-300">
                             <tr>
-                                <th className="px-6 py-4 w-1/3">Organization</th>
-                                <th className="px-6 py-4 w-1/3">Contact Details</th>
-                                <th className="px-6 py-4">Platform</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
+                                {/* Explicit Percentage Widths to ensure perfect fit without scrolling */}
+                                <th className="px-6 py-4 w-[35%]">Organization</th>
+                                <th className="px-6 py-4 w-[35%]">Contact Details</th>
+                                <th className="px-6 py-4 w-[20%]">Platform</th>
+                                <th className="px-6 py-4 w-[10%] text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="text-sm divide-y divide-[var(--border-subtle)]">
@@ -62,36 +68,65 @@ const Clients = () => {
 
                                 return (
                                     <tr key={client.id || index} className="hover:bg-[var(--bg-app)] transition-colors group">
-                                        <td className="px-6 py-3.5 font-bold uppercase text-[var(--text-main)] tracking-tight truncate transition-colors duration-300">
-                                            {client.client_name}
-                                        </td>
+                                        
+                                        {/* Organization & Avatar */}
                                         <td className="px-6 py-3.5 overflow-hidden">
-                                            <p className="text-xs font-bold uppercase text-[var(--text-main)] leading-none mb-1 truncate transition-colors duration-300">
+                                            <div className="flex items-center gap-3">
+                                                <div className="relative shrink-0">
+                                                    <div className="h-9 w-9 rounded-full bg-[var(--bg-app)] border border-[var(--border-subtle)] flex items-center justify-center text-[10px] font-bold text-[var(--text-muted)] uppercase">
+                                                        {client.client_name?.[0] || '?'}
+                                                    </div>
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="font-bold uppercase tracking-tight leading-none truncate transition-colors text-[var(--text-main)]">
+                                                        {client.client_name}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        {/* Contact Name & Email */}
+                                        <td className="px-6 py-3.5 overflow-hidden">
+                                            <p className="text-xs font-bold text-[var(--text-main)] uppercase tracking-tight truncate">
                                                 {primaryContact.contact_name || 'N/A'}
                                             </p>
-                                            {primaryContact.contact_email && (
-                                                <div className="flex items-center gap-1 text-[var(--text-muted)] font-bold uppercase text-[9px] transition-colors duration-300 truncate">
+                                            {primaryContact.contact_email ? (
+                                                <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-[var(--text-muted)] tracking-wider mt-1 truncate">
                                                     <Mail size={10} className="shrink-0" /> {primaryContact.contact_email}
                                                 </div>
+                                            ) : (
+                                                <p className="text-[10px] font-bold uppercase text-[var(--text-muted)] tracking-wider mt-1 truncate">
+                                                    ---
+                                                </p>
                                             )}
                                         </td>
+
+                                        {/* Platform / Website */}
                                         <td className="px-6 py-3.5 overflow-hidden">
                                             {client.website ? (
-                                                <a href={client.website} target="_blank" rel="noreferrer" className="text-[var(--text-muted)] hover:text-[var(--text-main)] flex items-center gap-2 transition-colors italic truncate text-xs">
+                                                <a 
+                                                    href={client.website.startsWith('http') ? client.website : `https://${client.website}`} 
+                                                    target="_blank" 
+                                                    rel="noreferrer" 
+                                                    className="flex items-center gap-1.5 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider hover:text-[var(--brand-primary)] transition-colors truncate"
+                                                >
                                                     <Globe size={12} className="shrink-0" /> {client.website.replace(/^https?:\/\//, '')}
                                                 </a>
                                             ) : (
-                                                <span className="text-[var(--text-muted)] italic text-xs">---</span>
+                                                <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">---</span>
                                             )}
                                         </td>
+
+                                        {/* Actions */}
                                         <td className="px-6 py-3.5 text-right">
                                             <button
                                                 onClick={() => setSelectedClient(client)}
                                                 className="text-[10px] font-bold uppercase tracking-widest bg-[var(--bg-app)] text-[var(--text-main)] hover:bg-[var(--brand-primary)] hover:text-[var(--brand-primary-text)] hover:border-[var(--brand-primary)] px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] transition-all active:scale-95 shadow-sm"
                                             >
-                                                View Client
+                                                View
                                             </button>
                                         </td>
+
                                     </tr>
                                 );
                             }) : (

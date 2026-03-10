@@ -24,7 +24,11 @@ const getNextDay = (dateString) => {
     return date.toISOString().split('T')[0];
 };
 
-const safeDate = (dateString) => dateString ? dateString.split('T')[0] : '';
+// FIXED: Now aggressively strips timestamps to ensure MySQL compatibility
+const safeDate = (dateString) => {
+    if (!dateString) return '';
+    return typeof dateString === 'string' ? dateString.split('T')[0] : '';
+};
 
 const formatSSN = (value) => {
     const v = value.replace(/\D/g, '').substring(0, 9);
@@ -60,9 +64,14 @@ const EmployeeDetailModal = ({ employee, onClose, onRefresh }) => {
     const isActive = employee?.is_active === 1 || employee?.is_active === true;
     const isTerminated = !!employee?.termination_date;
 
+    // FIXED: Initialize editData with properly formatted dates
     useEffect(() => {
         if (employee) {
-            setEditData({ ...employee });
+            setEditData({ 
+                ...employee,
+                birth_date: safeDate(employee.birth_date),
+                joining_date: safeDate(employee.joining_date)
+            });
             setErrors({});
             setSubmitError('');
         }
@@ -266,7 +275,7 @@ const EmployeeDetailModal = ({ employee, onClose, onRefresh }) => {
                     <div className="grid grid-cols-4 gap-2 bg-[var(--bg-app)]/50 p-2 rounded-xl border border-[var(--border-subtle)]">
                         <Field label="First Name*" value={editData.first_name} edit={isEditing} error={errors.first_name} onChange={v => updateField('first_name', v)} />
                         <Field label="Last Name*" value={editData.last_name} edit={isEditing} error={errors.last_name} onChange={v => updateField('last_name', v)} />
-                        <Field label="Birth Date*" type="date" value={safeDate(editData.birth_date)} edit={isEditing} error={errors.birth_date} onChange={v => updateField('birth_date', v)} />
+                        <Field label="Birth Date*" type="date" value={editData.birth_date} edit={isEditing} error={errors.birth_date} onChange={v => updateField('birth_date', v)} />
                         <Field label="Gender*" value={isEditing ? editData.gender_id : editData.gender_name} edit={isEditing} isSelect isObject options={lookups.genders} error={errors.gender_id} onChange={v => updateField('gender_id', v)} />
                         <Field label="Marital Status" value={isEditing ? editData.marital_status_id : editData.marital_status_name} edit={isEditing} isSelect isObject options={lookups.maritalStatuses} onChange={v => updateField('marital_status_id', v)} />
                     </div>
@@ -279,7 +288,7 @@ const EmployeeDetailModal = ({ employee, onClose, onRefresh }) => {
                         <Field label="Employee Code" value={editData.employee_code} edit={isEditing} onChange={v => updateField('employee_code', v)} />
                         <Field label="Job Title*" value={editData.title} edit={isEditing} error={errors.title} onChange={v => updateField('title', v)} />
                         <Field label="Employment Type*" value={isEditing ? editData.employee_type_id : editData.employee_type_name} edit={isEditing} isSelect isObject options={lookups.employeeTypes} error={errors.employee_type_id} onChange={v => updateField('employee_type_id', v)} />
-                        <Field label="Joining Date*" type="date" value={safeDate(editData.joining_date)} edit={isEditing} error={errors.joining_date} onChange={v => updateField('joining_date', v)} />
+                        <Field label="Joining Date*" type="date" value={editData.joining_date} edit={isEditing} error={errors.joining_date} onChange={v => updateField('joining_date', v)} />
                         <div className="col-span-2">
                             <Field label="SSN*" value={editData.ssn} edit={isEditing} type="ssn" maxLength={11} error={errors.ssn} onChange={v => updateField('ssn', formatSSN(v))} />
                         </div>
@@ -406,6 +415,8 @@ const EmployeeDetailModal = ({ employee, onClose, onRefresh }) => {
 };
 
 // --- EXTRACTED UI COMPONENTS ---
+// Note: In a production environment, you should move these sub-components into separate files
+// like `client/src/components/ui/forms/Field.jsx` to reduce file size.
 
 const SectionHeader = ({ icon, title }) => (
     <div className="flex items-center gap-1.5 border-b border-[var(--border-subtle)] pb-1 transition-colors duration-300">

@@ -7,6 +7,7 @@ export const getAllLookups = async (req, res) => {
         const [countries] = await pool.query('SELECT * FROM lkp_countries');
         const [immigrationStatuses] = await pool.query('SELECT * FROM lkp_immigration_statuses');
         const [payTypes] = await pool.query('SELECT * FROM lkp_pay_types');
+        const [clientContactTypes] = await pool.query('SELECT * FROM lkp_client_contact_types');
         
         // NEW LOOKUPS
         const [maritalStatuses] = await pool.query('SELECT * FROM lkp_marital_statuses');
@@ -19,7 +20,8 @@ export const getAllLookups = async (req, res) => {
             immigrationStatuses,
             payTypes,
             maritalStatuses,
-            phoneCodes
+            phoneCodes,
+            clientContactTypes
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
