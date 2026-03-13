@@ -6,7 +6,7 @@ import BaseModal from '../../../components/ui/BaseModal';
 
 const AddClientModal = ({ isOpen, onClose, onRefresh }) => {
     const [loading, setLoading] = useState(false);
-    const [lookups, setLookups] = useState({ clientContactTypes: [] });
+    const [lookups, setLookups] = useState({ clientContactTypes: [], phoneCodes: [] });
     const [errors, setErrors] = useState({});
     const [submitError, setSubmitError] = useState('');
     
@@ -16,7 +16,7 @@ const AddClientModal = ({ isOpen, onClose, onRefresh }) => {
         address: '',     
         fax_number: '',  
         contacts: [
-            { contact_name: '', contact_title: '', contact_type_id: '', contact_email: '', contact_phone: '', is_primary: true }
+            { contact_name: '', contact_title: '', contact_type_id: '', contact_email: '', phone_code_id: '', contact_phone: '', is_primary: true }
         ]
     };
     const [formData, setFormData] = useState(initialFormState);
@@ -47,6 +47,12 @@ const AddClientModal = ({ isOpen, onClose, onRefresh }) => {
         // Clear specific contact error
         const errorKey = `contact_${index}_${field}`;
         if (errors[errorKey]) setErrors(prev => ({ ...prev, [errorKey]: null }));
+        
+        // Also clear phone combined error if modifying phone fields
+        if (field === 'phone_code_id' || field === 'contact_phone') {
+            if (errors[`contact_${index}_contact_phone`]) setErrors(prev => ({ ...prev, [`contact_${index}_contact_phone`]: null }));
+        }
+
         if (submitError) setSubmitError('');
     };
 
@@ -68,7 +74,7 @@ const AddClientModal = ({ isOpen, onClose, onRefresh }) => {
         // Fax Validation (If provided, ensure it has enough numbers)
         if (formData.fax_number) {
             const faxDigits = formData.fax_number.replace(/\D/g, '');
-            if (faxDigits.length < 7) {
+            if (faxDigits.length > 0 && faxDigits.length < 7) {
                 newErrors.fax_number = "Fax number must be at least 7 digits.";
             }
         }
@@ -85,11 +91,24 @@ const AddClientModal = ({ isOpen, onClose, onRefresh }) => {
                 newErrors[`contact_${index}_contact_email`] = "Invalid email format.";
             }
 
-            // Phone Validation (If provided, ensure length)
-            if (contact.contact_phone) {
-                const phoneDigits = contact.contact_phone.replace(/\D/g, '');
-                if (phoneDigits.length < 10) {
-                    newErrors[`contact_${index}_contact_phone`] = "Phone must be at least 10 digits.";
+            // Phone Validation (Only check if they entered something)
+            if (contact.phone_code_id || contact.contact_phone) {
+                if (!contact.phone_code_id) {
+                    newErrors[`contact_${index}_contact_phone`] = "Country code is required.";
+                } else if (!contact.contact_phone) {
+                    newErrors[`contact_${index}_contact_phone`] = "Phone number is required.";
+                } else {
+                    const selectedCode = lookups.phoneCodes?.find(pc => String(pc.id) === String(contact.phone_code_id));
+                    if (selectedCode) {
+                        const country = selectedCode.country_name;
+                        const digitsOnly = contact.contact_phone.replace(/\D/g, ''); 
+
+                        if (['Canada', 'United States', 'India'].includes(country) && digitsOnly.length !== 10) {
+                            newErrors[`contact_${index}_contact_phone`] = `${country} numbers must be exactly 10 digits.`;
+                        } else if (country === 'United Kingdom' && (digitsOnly.length < 10 || digitsOnly.length > 11)) {
+                            newErrors[`contact_${index}_contact_phone`] = "UK numbers must be 10 or 11 digits.";
+                        }
+                    }
                 }
             }
         });
@@ -119,7 +138,7 @@ const AddClientModal = ({ isOpen, onClose, onRefresh }) => {
             ...formData,
             contacts: [
                 ...formData.contacts, 
-                { contact_name: '', contact_title: '', contact_type_id: '', contact_email: '', contact_phone: '', is_primary: false }
+                { contact_name: '', contact_title: '', contact_type_id: '', contact_email: '', phone_code_id: '', contact_phone: '', is_primary: false }
             ]
         });
     };
@@ -177,7 +196,7 @@ const AddClientModal = ({ isOpen, onClose, onRefresh }) => {
             <div className="space-y-6">
                 
                 {/* Company Details */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <FormInput 
                         label="Client / Company Name*" 
                         value={formData.client_name} 
@@ -201,7 +220,6 @@ const AddClientModal = ({ isOpen, onClose, onRefresh }) => {
                         label="Fax Number" 
                         placeholder="Not mandatory" 
                         value={formData.fax_number} 
-                        // Allow digits and '+' symbol for international faxes
                         onChange={v => updateField('fax_number', v.replace(/[^\d+]/g, ''))} 
                         error={errors.fax_number}
                         maxLength={20}
@@ -247,6 +265,7 @@ const AddClientModal = ({ isOpen, onClose, onRefresh }) => {
                                             type="button"
                                             onClick={() => removeContact(index)}
                                             className="text-[var(--text-muted)] hover:text-red-500 p-1.5 hover:bg-red-500/10 rounded-md transition-colors flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest outline-none"
+                                            title="Remove Contact"
                                         >
                                             <Trash2 size={12} /> Remove
                                         </button>
@@ -283,14 +302,34 @@ const AddClientModal = ({ isOpen, onClose, onRefresh }) => {
                                         error={errors[`contact_${index}_contact_email`]}
                                         maxLength={null}
                                     />
-                                    <FormInput 
-                                        label="Contact Phone" 
-                                        value={contact.contact_phone} 
-                                        // Strips all non-numeric characters automatically
-                                        onChange={v => handleContactChange(index, 'contact_phone', v.replace(/\D/g, ''))} 
-                                        error={errors[`contact_${index}_contact_phone`]}
-                                        maxLength={15}
-                                    />
+                                    
+                                    {/* DB-Driven Country Code & Phone Input */}
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">Contact Phone</label>
+                                        <div className="flex gap-1">
+                                            <select 
+                                                className={`w-1/3 py-1.5 px-1 bg-[var(--input-bg)] text-[var(--input-text)] border ${errors[`contact_${index}_contact_phone`] ? 'border-red-500' : 'border-[var(--border-subtle)]'} focus:border-[var(--brand-primary)] rounded-lg text-xs font-bold outline-none`}
+                                                value={contact.phone_code_id || ''}
+                                                onChange={e => {
+                                                    handleContactChange(index, 'phone_code_id', e.target.value);
+                                                    handleContactChange(index, 'contact_phone', ''); 
+                                                }}
+                                            >
+                                                <option value="" disabled>Code</option>
+                                                {lookups.phoneCodes?.map(pc => (
+                                                    <option key={pc.id} value={pc.id}>{pc.dial_code} ({pc.country_name})</option>
+                                                ))}
+                                            </select>
+                                            <input 
+                                                type="text"
+                                                maxLength={15}
+                                                className={`w-2/3 py-1.5 px-2 bg-[var(--input-bg)] text-[var(--input-text)] border rounded-lg text-xs font-bold outline-none transition-all ${errors[`contact_${index}_contact_phone`] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--border-subtle)] focus:border-[var(--brand-primary)]'}`}
+                                                value={contact.contact_phone || ''} 
+                                                onChange={e => handleContactChange(index, 'contact_phone', e.target.value.replace(/\D/g, ''))} 
+                                            />
+                                        </div>
+                                        {errors[`contact_${index}_contact_phone`] && <p className="text-[10px] text-red-500 font-semibold ml-1 leading-tight">{errors[`contact_${index}_contact_phone`]}</p>}
+                                    </div>
                                 </div>
                             </div>
                         ))}

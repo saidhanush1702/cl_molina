@@ -38,7 +38,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onRefresh }) => {
             first_name: '', last_name: '', birth_date: '',
             gender_id: '', marital_status_id: '', title: '', employee_code: '', 
             employee_type_id: '', ssn: '', joining_date: '',
-            immigration_status_id: '', immigration_start_date: '', immigration_till_date: '',
+            immigration_status_id: '', immigration_start_date: '', immigration_till_date: '', lca_wage: '',
             personal_email: '', phone_code_id: '', phone_number: '', country_id: '', e_verification_code: ''
         },
         auth: { email: '', password: '' }
@@ -266,10 +266,11 @@ const AddEmployeeModal = ({ isOpen, onClose, onRefresh }) => {
             )}
 
             {step === 3 && (
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-4 gap-4">
                     <FormSelect label="Immigration Status" isObject={true} options={lookups.immigrationStatuses || []} value={formData.profile.immigration_status_id} onChange={v => updateProfile('immigration_status_id', v)} />
                     <FormInput label="Start Date" type="date" value={formData.profile.immigration_start_date} onChange={v => updateProfile('immigration_start_date', v)} />
                     <FormInput label="Till Date" type="date" value={formData.profile.immigration_till_date} min={getNextDay(formData.profile.immigration_start_date)} onChange={v => updateProfile('immigration_till_date', v)} error={errors.immigration_till_date} />
+                    <FormInput label="LCA Wage" placeholder="e.g. $85,000" value={formData.profile.lca_wage} onChange={v => updateProfile('lca_wage', v)} />
                 </div>
             )}
 

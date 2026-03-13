@@ -47,24 +47,25 @@ const EmployeeDetailModal = ({ employee, onClose, onRefresh }) => {
     });
 
     const [immigrations, setImmigrations] = useState(getSafeImmigrations(employee?.immigrations));
+    // UPDATED: Included lca_wage in initial state
     const [showAddImm, setShowAddImm] = useState(false);
-    const [newImm, setNewImm] = useState({ status_id: '', start_date: '', till_date: '' });
+    const [newImm, setNewImm] = useState({ status_id: '', start_date: '', till_date: '', lca_wage: '' });
     
+    // UPDATED: Included lca_wage in initial state
     const [editingImmId, setEditingImmId] = useState(null);
-    const [editImmData, setEditImmData] = useState({ status_id: '', start_date: '', till_date: '' });
+    const [editImmData, setEditImmData] = useState({ status_id: '', start_date: '', till_date: '', lca_wage: '' });
 
     const [showPassword, setShowPassword] = useState(false);
     const [showDocuments, setShowDocuments] = useState(false);
 
     const [editData, setEditData] = useState({});
     const [errors, setErrors] = useState({});
-    const [submitError, setSubmitError] = useState(''); // Track Backend errors
+    const [submitError, setSubmitError] = useState(''); 
 
     const userRole = localStorage.getItem('userRole');
     const isActive = employee?.is_active === 1 || employee?.is_active === true;
     const isTerminated = !!employee?.termination_date;
 
-    // FIXED: Initialize editData with properly formatted dates
     useEffect(() => {
         if (employee) {
             setEditData({ 
@@ -182,7 +183,7 @@ const EmployeeDetailModal = ({ employee, onClose, onRefresh }) => {
             await managementAPI.addImmigration(employee.id, newImm);
             const statusObj = lookups.immigrationStatuses.find(s => String(s.id) === String(newImm.status_id));
             setImmigrations([...immigrations, { ...newImm, id: Date.now(), status_name: statusObj?.name }]);
-            setNewImm({ status_id: '', start_date: '', till_date: '' });
+            setNewImm({ status_id: '', start_date: '', till_date: '', lca_wage: '' });
             setShowAddImm(false); onRefresh(); 
         } catch (err) { alert("Failed to add record"); }
     };
@@ -311,9 +312,9 @@ const EmployeeDetailModal = ({ employee, onClose, onRefresh }) => {
                             lookups={lookups}
                             onCodeChange={v => {
                                 updateField('phone_code_id', v);
-                                updateField('phone_number', ''); // reset number on country change
+                                updateField('phone_number', ''); 
                             }}
-                            onNumberChange={v => updateField('phone_number', v.replace(/\D/g, ''))} // Strips letters immediately
+                            onNumberChange={v => updateField('phone_number', v.replace(/\D/g, ''))} 
                         />
 
                         <Field label="Country of Origin*" value={isEditing ? editData.country_id : editData.country_name} edit={isEditing} isSelect isObject options={lookups.countries} error={errors.country_id} onChange={v => updateField('country_id', v)} />
@@ -352,12 +353,13 @@ const EmployeeDetailModal = ({ employee, onClose, onRefresh }) => {
                     </div>
 
                     {isEditing && showAddImm && !editingImmId && (
-                        <div className="grid grid-cols-4 gap-2 p-3 bg-[var(--bg-app)]/80 rounded-xl border border-[var(--brand-primary)]/30 animate-in fade-in slide-in-from-top-2">
+                        <div className="grid grid-cols-5 gap-2 p-3 bg-[var(--bg-app)]/80 rounded-xl border border-[var(--brand-primary)]/30 animate-in fade-in slide-in-from-top-2">
                             <Field label="Status*" value={newImm.status_id} edit={true} isSelect={true} isObject={true} options={lookups.immigrationStatuses} onChange={v => setNewImm({...newImm, status_id: v})} />
                             <Field label="Start Date" type="date" value={newImm.start_date} edit={true} onChange={v => setNewImm({...newImm, start_date: v})} />
                             <Field label="Till Date" type="date" value={newImm.till_date} edit={true} min={getNextDay(newImm.start_date)} onChange={v => setNewImm({...newImm, till_date: v})} />
+                            <Field label="LCA Wage" placeholder="e.g. $85,000" value={newImm.lca_wage} edit={true} onChange={v => setNewImm({...newImm, lca_wage: v})} />
                             <div className="flex items-end pb-px">
-                                <button onClick={handleAddImmigration} className="w-full bg-[var(--brand-primary)] text-[var(--brand-primary-text)] py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:opacity-90 active:scale-95 transition-all">Save Record</button>
+                                <button onClick={handleAddImmigration} className="w-full bg-[var(--brand-primary)] text-[var(--brand-primary-text)] py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:opacity-90 active:scale-95 transition-all">Save</button>
                             </div>
                         </div>
                     )}
@@ -375,7 +377,15 @@ const EmployeeDetailModal = ({ employee, onClose, onRefresh }) => {
                                     isEditingThis={editingImmId === imm.id}
                                     editImmData={editImmData}
                                     setEditImmData={setEditImmData}
-                                    onEditStart={() => { setEditingImmId(imm.id); setEditImmData({ status_id: imm.status_id, start_date: safeDate(imm.start_date), till_date: safeDate(imm.till_date) }); }}
+                                    onEditStart={() => { 
+                                        setEditingImmId(imm.id); 
+                                        setEditImmData({ 
+                                            status_id: imm.status_id, 
+                                            start_date: safeDate(imm.start_date), 
+                                            till_date: safeDate(imm.till_date), 
+                                            lca_wage: imm.lca_wage || '' 
+                                        }); 
+                                    }}
                                     onEditCancel={() => setEditingImmId(null)}
                                     onEditSave={() => handleUpdateImmigration(imm.id)}
                                     onDelete={() => handleDeleteImmigration(imm.id)}
@@ -415,8 +425,6 @@ const EmployeeDetailModal = ({ employee, onClose, onRefresh }) => {
 };
 
 // --- EXTRACTED UI COMPONENTS ---
-// Note: In a production environment, you should move these sub-components into separate files
-// like `client/src/components/ui/forms/Field.jsx` to reduce file size.
 
 const SectionHeader = ({ icon, title }) => (
     <div className="flex items-center gap-1.5 border-b border-[var(--border-subtle)] pb-1 transition-colors duration-300">
@@ -425,7 +433,7 @@ const SectionHeader = ({ icon, title }) => (
     </div>
 );
 
-const Field = ({ label, value, edit, onChange, type = "text", isSelect = false, isObject = false, options = [], min, maxLength = 25, error }) => {
+const Field = ({ label, value, edit, onChange, type = "text", isSelect = false, isObject = false, options = [], min, maxLength = 25, placeholder, error }) => {
     const getDisplayValue = () => {
         if (!value) return '---';
         if (type === 'ssn' && String(value).length >= 4) return `XXX-XX-${String(value).slice(-4)}`;
@@ -442,7 +450,7 @@ const Field = ({ label, value, edit, onChange, type = "text", isSelect = false, 
                         {options.map(opt => <option key={isObject ? opt.id : opt} value={isObject ? opt.id : opt}>{isObject ? opt.name : opt}</option>)}
                     </select>
                 ) : (
-                    <input type={type === 'ssn' || type === 'email' ? 'text' : type} maxLength={type === 'email' ? undefined : maxLength} className={`w-full py-1 px-2 bg-[var(--input-bg)] text-[var(--input-text)] border rounded-lg text-[10px] font-bold focus:ring-1 outline-none transition-all ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-[var(--border-subtle)] focus:border-[var(--brand-primary)] focus:ring-[var(--brand-primary)]'}`} value={value || ''} min={min} onChange={e => onChange(e.target.value)} />
+                    <input type={type === 'ssn' || type === 'email' ? 'text' : type} placeholder={placeholder} maxLength={type === 'email' ? undefined : maxLength} className={`w-full py-1 px-2 bg-[var(--input-bg)] text-[var(--input-text)] border rounded-lg text-[10px] font-bold focus:ring-1 outline-none transition-all ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-[var(--border-subtle)] focus:border-[var(--brand-primary)] focus:ring-[var(--brand-primary)]'}`} value={value || ''} min={min} onChange={e => onChange(e.target.value)} />
                 )
             ) : (
                 <p className="text-[11px] font-bold text-[var(--text-main)] px-1 truncate transition-colors duration-300">{getDisplayValue()}</p>
@@ -496,10 +504,11 @@ const TerminationPanel = ({ terminationData, setTerminationData, onCancel, onCon
 const ImmigrationCard = ({ imm, lookups, isEditingGlobal, isEditingThis, editImmData, setEditImmData, onEditStart, onEditCancel, onEditSave, onDelete }) => (
     <div className="bg-[var(--bg-app)]/50 rounded-lg border border-[var(--border-subtle)] transition-colors duration-300 overflow-hidden">
         {isEditingThis ? (
-            <div className="grid grid-cols-4 gap-2 p-3 bg-blue-50/50 border-l-2 border-[var(--brand-primary)]">
+            <div className="grid grid-cols-5 gap-2 p-3 bg-blue-50/50 border-l-2 border-[var(--brand-primary)]">
                 <Field label="Status*" value={editImmData.status_id} edit={true} isSelect={true} isObject={true} options={lookups.immigrationStatuses} onChange={v => setEditImmData({...editImmData, status_id: v})} />
                 <Field label="Start Date" type="date" value={editImmData.start_date} edit={true} onChange={v => setEditImmData({...editImmData, start_date: v})} />
                 <Field label="Till Date" type="date" value={editImmData.till_date} edit={true} min={getNextDay(editImmData.start_date)} onChange={v => setEditImmData({...editImmData, till_date: v})} />
+                <Field label="LCA Wage" placeholder="e.g. $85,000" value={editImmData.lca_wage} edit={true} onChange={v => setEditImmData({...editImmData, lca_wage: v})} />
                 <div className="flex items-end gap-1 pb-px">
                     <button onClick={onEditCancel} className="flex-1 bg-white text-[var(--text-muted)] border border-[var(--border-subtle)] py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:text-[var(--text-main)] transition-all">Cancel</button>
                     <button onClick={onEditSave} className="flex-1 bg-[var(--brand-primary)] text-[var(--brand-primary-text)] py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:opacity-90 active:scale-95 transition-all">Update</button>
@@ -507,7 +516,7 @@ const ImmigrationCard = ({ imm, lookups, isEditingGlobal, isEditingThis, editImm
             </div>
         ) : (
             <div className="flex justify-between items-center px-3 py-2">
-                <div className="grid grid-cols-3 gap-8 w-full mr-4">
+                <div className="grid grid-cols-4 gap-6 w-full mr-4">
                     <div>
                         <p className="text-[8px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Status</p>
                         <p className="text-[11px] font-bold text-[var(--text-main)] truncate mt-0.5">{imm.status_name || imm.status}</p>
@@ -519,6 +528,10 @@ const ImmigrationCard = ({ imm, lookups, isEditingGlobal, isEditingThis, editImm
                     <div>
                         <p className="text-[8px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Till Date</p>
                         <p className="text-[10px] font-bold text-[var(--text-main)] mt-0.5">{safeDate(imm.till_date) || '---'}</p>
+                    </div>
+                    <div>
+                        <p className="text-[8px] font-bold text-[var(--text-muted)] uppercase tracking-widest">LCA Wage</p>
+                        <p className="text-[10px] font-bold text-[var(--text-main)] mt-0.5">{imm.lca_wage || '---'}</p>
                     </div>
                 </div>
                 {isEditingGlobal && (

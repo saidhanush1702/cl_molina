@@ -14,8 +14,6 @@ export const addEmployee = async (req, res) => {
         const creatorId = req.user.id;
 
         const userId = uuidv4();
-
-        // Changed from bcrypt to AES Encryption
         const hashedPw = encryptPassword(auth.password);
 
         await connection.query(
@@ -47,8 +45,8 @@ export const addEmployee = async (req, res) => {
 
         if (profile.immigration_status_id) {
             await connection.query(
-                `INSERT INTO employee_immigrations (id, employee_id, status_id, start_date, till_date, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [uuidv4(), employeeId, profile.immigration_status_id, profile.immigration_start_date || null, profile.immigration_till_date || null, creatorId, creatorId]
+                `INSERT INTO employee_immigrations (id, employee_id, status_id, start_date, till_date, lca_wage, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [uuidv4(), employeeId, profile.immigration_status_id, profile.immigration_start_date || null, profile.immigration_till_date || null, profile.lca_wage || null, creatorId, creatorId]
             );
         }
 
@@ -87,7 +85,8 @@ export const getEmployees = async (req, res) => {
                         'status_id', i.status_id, 
                         'status_name', lis.name, 
                         'start_date', i.start_date, 
-                        'till_date', i.till_date
+                        'till_date', i.till_date,
+                        'lca_wage', i.lca_wage
                     )
                  ) 
                  FROM employee_immigrations i 
@@ -104,13 +103,10 @@ export const getEmployees = async (req, res) => {
             ORDER BY u.created_at DESC
         `, [req.user.orgId]);
 
-        // Map through the employees to attach the decrypted password
-        const formattedEmployees = employees.map(emp => {
-            return {
-                ...emp,
-                plain_password: decryptPassword(emp.password_hash) || 'Encrypted (Old Hash)'
-            };
-        });
+        const formattedEmployees = employees.map(emp => ({
+            ...emp,
+            plain_password: decryptPassword(emp.password_hash) || 'Encrypted (Old Hash)'
+        }));
 
         res.json(formattedEmployees);
     } catch (error) {
@@ -151,12 +147,12 @@ export const updateEmployee = async (req, res) => {
 
 export const addImmigrationRecord = async (req, res) => {
     const { empId } = req.params;
-    const { status_id, start_date, till_date } = req.body;
+    const { status_id, start_date, till_date, lca_wage } = req.body;
     const creatorId = req.user.id;
     try {
         await pool.query(
-            `INSERT INTO employee_immigrations (id, employee_id, status_id, start_date, till_date, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [uuidv4(), empId, status_id || null, start_date || null, till_date || null, creatorId, creatorId]
+            `INSERT INTO employee_immigrations (id, employee_id, status_id, start_date, till_date, lca_wage, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [uuidv4(), empId, status_id || null, start_date || null, till_date || null, lca_wage || null, creatorId, creatorId]
         );
         res.status(201).json({ message: "Immigration record added." });
     } catch (error) {
@@ -167,15 +163,15 @@ export const addImmigrationRecord = async (req, res) => {
 
 export const updateImmigrationRecord = async (req, res) => {
     const { immId } = req.params;
-    const { status_id, start_date, till_date } = req.body;
+    const { status_id, start_date, till_date, lca_wage } = req.body;
     const updatedBy = req.user.id;
 
     try {
         await pool.query(
             `UPDATE employee_immigrations 
-             SET status_id = ?, start_date = ?, till_date = ?, updated_by = ? 
+             SET status_id = ?, start_date = ?, till_date = ?, lca_wage = ?, updated_by = ? 
              WHERE id = ?`,
-            [status_id || null, start_date || null, till_date || null, updatedBy, immId]
+            [status_id || null, start_date || null, till_date || null, lca_wage || null, updatedBy, immId]
         );
         res.json({ message: "Immigration record updated successfully." });
     } catch (error) {
@@ -184,16 +180,29 @@ export const updateImmigrationRecord = async (req, res) => {
 };
 
 export const deleteEmployee = async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.params; // This is the Employee ID
     const userRole = req.user.role;
 
     try {
         if (userRole !== 'ORG_ADMIN') {
             return res.status(403).json({ message: "Access Denied: Only Admins can delete users." });
         }
-        if (id === req.user.id) return res.status(400).json({ message: "Cannot delete yourself." });
 
-        await pool.query('DELETE FROM users WHERE id = ? AND organization_id = ?', [id, req.user.orgId]);
+        // 1. Find the exact user_id linked to this employee profile
+        const [emp] = await pool.query(`SELECT user_id FROM employees WHERE id = ? AND organization_id = ?`, [id, req.user.orgId]);
+        
+        if (emp.length === 0) {
+            return res.status(404).json({ message: "Employee not found." });
+        }
+
+        const targetUserId = emp[0].user_id;
+
+        if (targetUserId === req.user.id) return res.status(400).json({ message: "Cannot delete yourself." });
+
+        // Deleting the user will cascade and delete the employee if your DB is set up with ON DELETE CASCADE,
+        // otherwise, you should delete the employee record first, then the user.
+        await pool.query('DELETE FROM users WHERE id = ? AND organization_id = ?', [targetUserId, req.user.orgId]);
+        
         res.json({ message: "Employee deleted successfully." });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -201,7 +210,7 @@ export const deleteEmployee = async (req, res) => {
 };
 
 export const terminateEmployee = async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.params; // This is the Employee ID
     const { date, reason } = req.body;
     const orgId = req.user.orgId;
     const userRole = req.user.role;
@@ -209,26 +218,38 @@ export const terminateEmployee = async (req, res) => {
     if (userRole !== 'ORG_ADMIN') {
         return res.status(403).json({ message: "Access Denied: Only Admins can terminate users." });
     }
-    if (id === req.user.id) {
-        return res.status(400).json({ message: "Cannot terminate yourself." });
-    }
 
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
 
+        // 1. Find the user_id tied to this employee record
+        const [emp] = await connection.query(`SELECT user_id FROM employees WHERE id = ? AND organization_id = ?`, [id, orgId]);
+        
+        if (emp.length === 0) {
+            throw new Error("Employee record not found.");
+        }
+        
+        const targetUserId = emp[0].user_id;
+
+        if (targetUserId === req.user.id) {
+            return res.status(400).json({ message: "Cannot terminate yourself." });
+        }
+
+        // 2. Update Employee Table (Using employee ID)
         await connection.query(
             `UPDATE employees 
              SET termination_date = ?, reason_for_termination = ?, updated_by = ? 
-             WHERE user_id = ? AND organization_id = ?`,
+             WHERE id = ? AND organization_id = ?`,
             [date, reason, req.user.id, id, orgId]
         );
 
+        // 3. Update Users Table (Using the mapped User ID)
         await connection.query(
             `UPDATE users 
              SET is_active = FALSE, updated_by = ? 
              WHERE id = ? AND organization_id = ?`,
-            [req.user.id, id, orgId]
+            [req.user.id, targetUserId, orgId]
         );
 
         await connection.commit();
@@ -242,22 +263,34 @@ export const terminateEmployee = async (req, res) => {
 };
 
 export const toggleEmployeeAccess = async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.params; // This is the Employee ID
     const { is_active } = req.body;
     const orgId = req.user.orgId;
 
     if (req.user.role !== 'ORG_ADMIN') {
         return res.status(403).json({ message: "Access Denied." });
     }
-    if (id === req.user.id) {
-        return res.status(400).json({ message: "Cannot change your own access." });
-    }
 
     try {
+        // 1. Get the target user_id for this employee
+        const [emp] = await pool.query(`SELECT user_id FROM employees WHERE id = ? AND organization_id = ?`, [id, orgId]);
+        
+        if (emp.length === 0) {
+            return res.status(404).json({ message: "Employee not found." });
+        }
+        
+        const targetUserId = emp[0].user_id;
+
+        if (targetUserId === req.user.id) {
+            return res.status(400).json({ message: "Cannot change your own access." });
+        }
+
+        // 2. Update the users table using targetUserId
         await pool.query(
             `UPDATE users SET is_active = ?, updated_by = ? WHERE id = ? AND organization_id = ?`,
-            [is_active, req.user.id, id, orgId]
+            [is_active, req.user.id, targetUserId, orgId]
         );
+        
         res.json({ message: `Employee access ${is_active ? 'restored' : 'suspended'} successfully.` });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -267,34 +300,33 @@ export const toggleEmployeeAccess = async (req, res) => {
 export const getNextEmployeeCode = async (req, res) => {
     try {
         const orgId = req.user.orgId;
+        const currentYear = new Date().getFullYear().toString().slice(-2); // e.g. "26"
+        const prefix = `${currentYear}SHA256`;
 
         const [rows] = await pool.query(`
             SELECT employee_code 
             FROM employees 
-            WHERE organization_id = ? AND employee_code IS NOT NULL
-        `, [orgId]);
+            WHERE organization_id = ? AND employee_code LIKE ?
+        `, [orgId, `${prefix}%`]);
 
-        let maxNumber = 0;
+        let maxNumber = -1; // Start at -1 so next code defaults to 000
 
         rows.forEach(row => {
-            const match = row.employee_code.match(/\d+/);
-            if (match) {
-                const num = parseInt(match[0], 10);
-                if (num > maxNumber) {
-                    maxNumber = num;
-                }
+            const seqStr = row.employee_code.slice(prefix.length); // Extract digits
+            const num = parseInt(seqStr, 10);
+            if (!isNaN(num) && num > maxNumber) {
+                maxNumber = num;
             }
         });
 
         const nextNumber = maxNumber + 1;
-        const nextCode = `EMP-${String(nextNumber).padStart(3, '0')}`;
+        const nextCode = `${prefix}${String(nextNumber).padStart(3, '0')}`;
 
         res.json({ nextCode });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };
-
 
 
 // --- DELETE IMMIGRATION RECORD ---

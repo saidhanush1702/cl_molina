@@ -19,7 +19,7 @@ const getSafeContacts = (contactsRaw) => {
 
 const ClientDetailModal = ({ client, onClose, onRefresh }) => {
     const [isEditing, setIsEditing] = useState(false);
-    const [lookups, setLookups] = useState({ clientContactTypes: [] });
+    const [lookups, setLookups] = useState({ clientContactTypes: [], phoneCodes: [] });
     const [errors, setErrors] = useState({});
     const [submitError, setSubmitError] = useState('');
     
@@ -76,10 +76,24 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
                 newErrors[`contact_${index}_contact_email`] = "Invalid email format.";
             }
 
-            if (contact.contact_phone) {
-                const phoneDigits = contact.contact_phone.replace(/\D/g, '');
-                if (phoneDigits.length > 0 && phoneDigits.length < 10) {
-                    newErrors[`contact_${index}_contact_phone`] = "Phone must be at least 10 digits.";
+            // Phone Validation (Only check if they entered something)
+            if (contact.phone_code_id || contact.contact_phone) {
+                if (!contact.phone_code_id) {
+                    newErrors[`contact_${index}_contact_phone`] = "Country code is required.";
+                } else if (!contact.contact_phone) {
+                    newErrors[`contact_${index}_contact_phone`] = "Phone number is required.";
+                } else {
+                    const selectedCode = lookups.phoneCodes?.find(pc => String(pc.id) === String(contact.phone_code_id));
+                    if (selectedCode) {
+                        const country = selectedCode.country_name;
+                        const digitsOnly = contact.contact_phone.replace(/\D/g, ''); 
+
+                        if (['Canada', 'United States', 'India'].includes(country) && digitsOnly.length !== 10) {
+                            newErrors[`contact_${index}_contact_phone`] = `${country} numbers must be exactly 10 digits.`;
+                        } else if (country === 'United Kingdom' && (digitsOnly.length < 10 || digitsOnly.length > 11)) {
+                            newErrors[`contact_${index}_contact_phone`] = "UK numbers must be 10 or 11 digits.";
+                        }
+                    }
                 }
             }
         });
@@ -124,6 +138,12 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
         
         const errorKey = `contact_${index}_${field}`;
         if (errors[errorKey]) setErrors(prev => ({ ...prev, [errorKey]: null }));
+        
+        // Also clear phone combined error if modifying phone fields
+        if (field === 'phone_code_id' || field === 'contact_phone') {
+            if (errors[`contact_${index}_contact_phone`]) setErrors(prev => ({ ...prev, [`contact_${index}_contact_phone`]: null }));
+        }
+
         if (submitError) setSubmitError('');
     };
 
@@ -132,7 +152,7 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
             ...editData,
             contacts: [
                 ...editData.contacts, 
-                { contact_name: '', contact_title: '', contact_type_id: '', contact_email: '', contact_phone: '', is_primary: editData.contacts.length === 0 }
+                { contact_name: '', contact_title: '', contact_type_id: '', contact_email: '', phone_code_id: '', contact_phone: '', is_primary: editData.contacts.length === 0 }
             ]
         });
     };
@@ -159,9 +179,9 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
     if (!client) return null;
 
     const modalFooter = (
-        <div className="flex flex-col w-full gap-2">
+        <div className="flex flex-col w-full gap-3">
             {submitError && (
-                <div className="w-full bg-red-500/10 border border-red-500/30 text-red-600 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+                <div className="w-full bg-red-500/10 border border-red-500/30 text-red-600 px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
                     <AlertTriangle size={14} className="shrink-0" />
                     <span>{submitError}</span>
                 </div>
@@ -357,15 +377,44 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
                                         maxLength={null}
                                     />
                                     
-                                    <ClientField 
-                                        label="Contact Phone" 
-                                        icon={<Phone size={14}/>}
-                                        value={contact.contact_phone} 
-                                        edit={isEditing} 
-                                        onChange={v => handleContactChange(index, 'contact_phone', v.replace(/\D/g, ''))} 
-                                        error={errors[`contact_${index}_contact_phone`]}
-                                        maxLength={15}
-                                    />
+                                    {/* Handle Phone View/Edit Mode */}
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1 transition-colors duration-300">
+                                            Contact Phone
+                                        </label>
+                                        {isEditing ? (
+                                            <div className="flex gap-1">
+                                                <select 
+                                                    className={`w-1/3 py-1.5 px-1 bg-[var(--input-bg)] text-[var(--input-text)] border ${errors[`contact_${index}_contact_phone`] ? 'border-red-500' : 'border-[var(--border-subtle)]'} focus:border-[var(--brand-primary)] rounded-lg text-xs font-bold outline-none`}
+                                                    value={contact.phone_code_id || ''}
+                                                    onChange={e => {
+                                                        handleContactChange(index, 'phone_code_id', e.target.value);
+                                                        handleContactChange(index, 'contact_phone', ''); 
+                                                    }}
+                                                >
+                                                    <option value="" disabled>Code</option>
+                                                    {lookups.phoneCodes?.map(pc => (
+                                                        <option key={pc.id} value={pc.id}>{pc.dial_code} ({pc.country_name})</option>
+                                                    ))}
+                                                </select>
+                                                <input 
+                                                    type="text"
+                                                    maxLength={15}
+                                                    className={`w-2/3 py-1.5 px-2 bg-[var(--input-bg)] text-[var(--input-text)] border rounded-lg text-xs font-bold outline-none transition-all ${errors[`contact_${index}_contact_phone`] ? 'border-red-500 focus:ring-red-500' : 'border-[var(--border-subtle)] focus:border-[var(--brand-primary)]'}`}
+                                                    value={contact.contact_phone || ''} 
+                                                    onChange={e => handleContactChange(index, 'contact_phone', e.target.value.replace(/\D/g, ''))} 
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-1.5 px-1 py-1">
+                                                <span className="text-[var(--text-muted)] shrink-0"><Phone size={14}/></span>
+                                                <p className="text-xs font-bold text-[var(--text-main)] truncate transition-colors duration-300">
+                                                    {contact.contact_phone ? `${contact.phone_dial_code || ''} ${contact.contact_phone}`.trim() : '---'}
+                                                </p>
+                                            </div>
+                                        )}
+                                        {errors[`contact_${index}_contact_phone`] && <p className="text-[9px] text-red-500 font-semibold ml-1 leading-tight">{errors[`contact_${index}_contact_phone`]}</p>}
+                                    </div>
                                 </div>
                             </div>
                         ))}

@@ -23,19 +23,12 @@ export const createClient = async (req, res) => {
                 const contactId = uuidv4();
                 await connection.query(
                     `INSERT INTO client_contacts 
-                    (id, client_id, contact_name, contact_title, contact_type_id, contact_email, contact_phone, is_primary, created_by, updated_by) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    (id, client_id, contact_name, contact_title, contact_type_id, contact_email, phone_code_id, contact_phone, is_primary, created_by, updated_by) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
-                        contactId, 
-                        clientId, 
-                        contact.contact_name, 
-                        contact.contact_title || null, 
-                        contact.contact_type_id || null, // Lookup ID
-                        contact.contact_email, 
-                        contact.contact_phone || null, 
-                        contact.is_primary || false, 
-                        creatorId, 
-                        creatorId
+                        contactId, clientId, contact.contact_name, contact.contact_title || null, contact.contact_type_id || null, 
+                        contact.contact_email, contact.phone_code_id || null, contact.contact_phone || null, 
+                        contact.is_primary || false, creatorId, creatorId
                     ]
                 );
             }
@@ -66,6 +59,8 @@ export const getClients = async (req, res) => {
                                 'contact_type_id', cc.contact_type_id,
                                 'contact_type_name', ct.name,
                                 'contact_email', cc.contact_email,
+                                'phone_code_id', cc.phone_code_id,
+                                'phone_dial_code', pc.dial_code,
                                 'contact_phone', cc.contact_phone,
                                 'is_primary', cc.is_primary
                             ),
@@ -76,6 +71,7 @@ export const getClients = async (req, res) => {
             FROM clients c
             LEFT JOIN client_contacts cc ON c.id = cc.client_id
             LEFT JOIN lkp_client_contact_types ct ON cc.contact_type_id = ct.id
+            LEFT JOIN lkp_phone_codes pc ON cc.phone_code_id = pc.id
             WHERE c.organization_id = ?
             GROUP BY c.id
             ORDER BY c.created_at DESC
@@ -83,22 +79,15 @@ export const getClients = async (req, res) => {
         
         const formattedClients = clients.map(client => {
             let parsedContacts = client.contacts;
-            
             if (typeof parsedContacts === 'string') {
-                try { parsedContacts = JSON.parse(parsedContacts); } 
-                catch (e) { parsedContacts = []; }
+                try { parsedContacts = JSON.parse(parsedContacts); } catch (e) { parsedContacts = []; }
             }
-            
             if (Array.isArray(parsedContacts)) {
                 parsedContacts = parsedContacts.filter(c => c !== null);
             } else {
                 parsedContacts = [];
             }
-
-            return {
-                ...client,
-                contacts: parsedContacts
-            };
+            return { ...client, contacts: parsedContacts };
         });
 
         res.json(formattedClients);
@@ -128,19 +117,12 @@ export const updateClient = async (req, res) => {
                 const contactId = uuidv4();
                 await connection.query(
                     `INSERT INTO client_contacts 
-                    (id, client_id, contact_name, contact_title, contact_type_id, contact_email, contact_phone, is_primary, created_by, updated_by) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    (id, client_id, contact_name, contact_title, contact_type_id, contact_email, phone_code_id, contact_phone, is_primary, created_by, updated_by) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
-                        contactId, 
-                        id, 
-                        contact.contact_name, 
-                        contact.contact_title || null, 
-                        contact.contact_type_id || null, 
-                        contact.contact_email, 
-                        contact.contact_phone || null, 
-                        contact.is_primary || false, 
-                        req.user.id, 
-                        req.user.id
+                        contactId, id, contact.contact_name, contact.contact_title || null, contact.contact_type_id || null, 
+                        contact.contact_email, contact.phone_code_id || null, contact.contact_phone || null, 
+                        contact.is_primary || false, req.user.id, req.user.id
                     ]
                 );
             }

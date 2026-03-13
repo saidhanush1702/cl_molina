@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building, Globe, Plus, Mail } from 'lucide-react';
+import { Building, Globe, UserPlus, Mail } from 'lucide-react';
 import { managementAPI } from '../../../api/apiService';
 import AddClientModal from './AddClientModal';
 import ClientDetailModal from './ClientDetailModal';
@@ -45,7 +45,7 @@ const Clients = () => {
                     onClick={() => setIsClientModalOpen(true)}
                     className="bg-[var(--brand-primary)] text-[var(--brand-primary-text)] px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2 shadow-sm active:scale-95 shrink-0"
                 >
-                    <Plus size={16} /> <span className="hidden sm:inline">Add Client</span>
+                    <UserPlus size={16} /> <span className="hidden sm:inline">Add Client</span>
                 </button>
             </div>
 
