@@ -108,6 +108,7 @@ npm install
 Inside the `backend` folder, create a file named `.env` and add:
 
 ```env
+NODE_ENV=development
 PORT=5000
 CLIENT_ORIGIN=http://localhost:5173
 
@@ -206,7 +207,7 @@ npm run dev
 ## 🧩 Common Tasks
 
 - **Run migrations manually:** `node backend/migrate.js`
-- **Reset database:** drop `small_business_db` and rerun migrations
+- **Reset database:** drop database `small_business_db` and rerun migrations
 - **Add a new organization:** through super‑admin UI
 - **View uploaded documents:** stored under `backend/uploads/documents`
 

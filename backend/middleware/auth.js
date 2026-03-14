@@ -6,6 +6,7 @@ export const verifyToken = (req, res, next) => {
     const token = req.cookies.token;
 
     if (!token) {
+        console.warn('No token in cookies. Available cookies:', Object.keys(req.cookies));
         return res.status(403).json({ message: "No token provided. Access Forbidden." });
     }
 
@@ -14,6 +15,7 @@ export const verifyToken = (req, res, next) => {
         req.user = decoded;
         next();
     } catch (err) {
+        console.error('Token verification failed:', err.message);
         return res.status(401).json({ message: "Unauthorized/Invalid Token" });
     }
 };
