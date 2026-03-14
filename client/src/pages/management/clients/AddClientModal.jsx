@@ -193,10 +193,10 @@ const AddClientModal = ({ isOpen, onClose, onRefresh }) => {
             headerRight={`${formData.contacts.length} Contact${formData.contacts.length !== 1 ? 's' : ''}`}
             footer={modalFooter}
         >
-            <div className="space-y-6">
+            <div className="space-y-4">
                 
-                {/* Company Details */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Company Details - Changed to a 2x2 Grid for better proportions */}
+                <div className="grid -mt-3 grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
                     <FormInput 
                         label="Client / Company Name*" 
                         value={formData.client_name} 
@@ -227,8 +227,8 @@ const AddClientModal = ({ isOpen, onClose, onRefresh }) => {
                 </div>
                 
                 {/* Contacts Section */}
-                <div className="pt-4 border-t border-[var(--border-subtle)] transition-colors duration-300">
-                    <div className="flex justify-between items-center mb-4">
+                <div className="pt-3 border-t border-[var(--border-subtle)] transition-colors duration-300">
+                    <div className="flex justify-between items-center mb-3">
                         <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
                             Points of Contact
                         </p>
@@ -241,7 +241,7 @@ const AddClientModal = ({ isOpen, onClose, onRefresh }) => {
                         </button>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         {formData.contacts.map((contact, index) => (
                             <div key={index} className="relative p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-app)]/50 transition-colors duration-300">
                                 
@@ -272,8 +272,8 @@ const AddClientModal = ({ isOpen, onClose, onRefresh }) => {
                                     )}
                                 </div>
 
-                                {/* Contact Inputs */}
-                                <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+                                {/* Contact Inputs - Changed to a more spacious 3-column layout */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
                                     <FormInput 
                                         label="Contact Name*" 
                                         value={contact.contact_name} 

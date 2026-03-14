@@ -105,7 +105,7 @@ const Workforce = () => {
     const isFilterActive = filterCountry !== 'ALL' || filterPayType !== 'ALL' || filterStatus !== 'ALL' || searchQuery;
 
     return (
-        <div className="max-w-7xl mx-auto flex flex-col h-[calc(100vh-5rem)] md:h-[calc(100vh-8rem)] gap-2 animate-in fade-in duration-500">
+        <div className="max-w-7xl -mt-3 -mx-3 flex flex-col h-[calc(100vh-5rem)] md:h-[calc(100vh-8rem)] gap-2 animate-in fade-in duration-500">
 
             {/* HEADER CARD */}
             <div className="bg-[var(--bg-surface)] px-4 sm:px-6 py-3 sm:py-4 rounded-2xl border border-[var(--border-subtle)] shadow-sm flex justify-between items-center shrink-0 transition-colors duration-300">

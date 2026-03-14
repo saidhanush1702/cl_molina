@@ -23,22 +23,31 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
     const [errors, setErrors] = useState({});
     const [submitError, setSubmitError] = useState('');
     
+    // NEW: We track the latest saved baseline so "Cancel" works correctly after a save
+    const [currentClient, setCurrentClient] = useState(client);
+
     const [editData, setEditData] = useState({ 
-        ...client,
-        contacts: getSafeContacts(client?.contacts)
+        ...currentClient,
+        contacts: getSafeContacts(currentClient?.contacts)
     });
     
     const userRole = localStorage.getItem('userRole');
 
+    // Sync if parent passes a completely new client prop
+    useEffect(() => {
+        setCurrentClient(client);
+    }, [client]);
+
+    // Reset edit data to the baseline whenever it changes (on load, or after a successful save)
     useEffect(() => {
         setEditData({ 
-            ...client,
-            contacts: getSafeContacts(client?.contacts)
+            ...currentClient,
+            contacts: getSafeContacts(currentClient?.contacts)
         });
         setIsEditing(false);
         setErrors({});
         setSubmitError('');
-    }, [client]);
+    }, [currentClient]);
 
     useEffect(() => {
         commonAPI.getLookups()
@@ -107,9 +116,11 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
         setSubmitError('');
         try {
             await api.put(`/api/management/clients/${client.id}`, editData);
-            setIsEditing(false);
-            onRefresh();
-            onClose();
+            
+            // Setting the new baseline triggers the useEffect above, cleanly exiting edit mode while staying open
+            setCurrentClient(editData); 
+            onRefresh(); // Updates the background table
+            
         } catch (err) { 
             setSubmitError(err.response?.data?.error || err.response?.data?.message || "Update failed"); 
         }
@@ -206,8 +217,8 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
                                     setErrors({});
                                     setSubmitError('');
                                     setEditData({ 
-                                        ...client,
-                                        contacts: getSafeContacts(client?.contacts) 
+                                        ...currentClient,
+                                        contacts: getSafeContacts(currentClient?.contacts) 
                                     });
                                 }} 
                                 className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors outline-none"
@@ -235,8 +246,8 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
         >
             <div className="space-y-4">
                 
-                {/* Main Details - HIGH DENSITY GRID (4 Columns) */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 bg-[var(--bg-app)]/50 p-4 rounded-xl border border-[var(--border-subtle)]">
+                {/* Main Details - HIGH DENSITY GRID */}
+                <div className="grid grid-cols-2 -mt-3 -mx-3 lg:grid-cols-4 gap-3 bg-[var(--bg-app)]/50 p-4 rounded-xl border border-[var(--border-subtle)]">
                     <ClientField 
                         label="Client / Company Name*" 
                         icon={<Building2 size={14}/>} 
@@ -272,7 +283,7 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
                 </div>
 
                 {/* Contacts Section */}
-                <div className="pt-1">
+                <div className="pt-2 -mt-3 -mx-3">
                     <div className="flex justify-between items-center mb-3">
                         <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
                             Points of Contact
@@ -295,10 +306,10 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
                         )}
                         
                         {editData.contacts?.map((contact, index) => (
-                            <div key={index} className={`relative p-3 rounded-xl border border-[var(--border-subtle)] transition-colors duration-300 ${isEditing ? 'bg-[var(--bg-app)]/50' : 'bg-transparent'}`}>
+                            <div key={index} className={`relative p-4 rounded-xl border border-[var(--border-subtle)] transition-colors duration-300 ${isEditing ? 'bg-[var(--bg-app)]/50' : 'bg-[var(--bg-app)]/30'}`}>
                                 
                                 {/* Contact Header Controls */}
-                                <div className="flex justify-between items-center mb-2 pb-2 border-b border-[var(--border-subtle)]">
+                                <div className="flex justify-between items-center mb-3 pb-2 border-b border-[var(--border-subtle)]">
                                     {isEditing ? (
                                         <button 
                                             type="button"
@@ -336,8 +347,8 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
                                     )}
                                 </div>
 
-                                {/* Contact Fields Grid - HIGH DENSITY GRID (5 Columns) */}
-                                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                                {/* Contact Fields Grid */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3">
                                     <ClientField 
                                         label="Contact Name*" 
                                         icon={<User size={14}/>}
@@ -406,7 +417,7 @@ const ClientDetailModal = ({ client, onClose, onRefresh }) => {
                                                 />
                                             </div>
                                         ) : (
-                                            <div className="flex items-center gap-1.5 px-1 py-1">
+                                            <div className="flex items-center gap-1.5 px-1 py-1.5">
                                                 <span className="text-[var(--text-muted)] shrink-0"><Phone size={14}/></span>
                                                 <p className="text-xs font-bold text-[var(--text-main)] truncate transition-colors duration-300">
                                                     {contact.contact_phone ? `${contact.phone_dial_code || ''} ${contact.contact_phone}`.trim() : '---'}
@@ -448,7 +459,7 @@ const ClientField = ({ label, icon, value, edit, onChange, type = "text", placeh
                 {error && <p className="text-[9px] text-red-500 font-semibold ml-1 leading-tight">{error}</p>}
             </>
         ) : (
-            <div className="flex items-center gap-1.5 px-1 py-1">
+            <div className="flex items-center gap-1.5 px-1 py-1.5">
                 <span className="text-[var(--text-muted)] shrink-0">{icon}</span>
                 <p className="text-xs font-bold text-[var(--text-main)] truncate transition-colors duration-300">
                     {value || '---'}
@@ -483,7 +494,7 @@ const ClientSelectField = ({ label, icon, value, displayValue, edit, onChange, o
                 {error && <p className="text-[9px] text-red-500 font-semibold ml-1 leading-tight">{error}</p>}
             </>
         ) : (
-            <div className="flex items-center gap-1.5 px-1 py-1">
+            <div className="flex items-center gap-1.5 px-1 py-1.5">
                 <span className="text-[var(--text-muted)] shrink-0">{icon}</span>
                 <p className="text-xs font-bold text-[var(--text-main)] truncate transition-colors duration-300">
                     {displayValue || '---'}

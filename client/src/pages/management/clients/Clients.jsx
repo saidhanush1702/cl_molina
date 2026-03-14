@@ -23,7 +23,7 @@ const Clients = () => {
     }, []);
 
     return (
-        <div className="max-w-7xl mx-auto flex flex-col h-[calc(100vh-6rem)] sm:h-[calc(100vh-8rem)] gap-2 animate-in fade-in duration-500">
+        <div className="max-w-7xl -mt-3 -mx-3 flex flex-col h-[calc(100vh-6rem)] sm:h-[calc(100vh-8rem)] gap-2 animate-in fade-in duration-500">
             
             {/* Header Section (Responsive High Density) */}
             <div className="bg-[var(--bg-surface)] px-4 sm:px-6 py-3 sm:py-4 rounded-2xl border border-[var(--border-subtle)] shadow-sm flex justify-between items-center shrink-0 transition-colors duration-300">
