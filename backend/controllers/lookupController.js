@@ -2,21 +2,28 @@ import pool from '../config/db.js';
 
 export const getAllLookups = async (req, res) => {
     try {
-        const [genders] = await pool.query('SELECT id, name FROM lkp_genders ORDER BY id');
-        const [employeeTypes] = await pool.query('SELECT id, name FROM lkp_employee_types ORDER BY id');
-        const [countries] = await pool.query('SELECT id, name FROM lkp_countries ORDER BY name');
-        const [immigrationStatuses] = await pool.query('SELECT id, name FROM lkp_immigration_statuses ORDER BY id');
-        const [payTypes] = await pool.query('SELECT id, name FROM lkp_pay_types ORDER BY id');
+        const [genders] = await pool.query('SELECT * FROM lkp_genders');
+        const [employeeTypes] = await pool.query('SELECT * FROM lkp_employee_types');
+        const [countries] = await pool.query('SELECT * FROM lkp_countries');
+        const [immigrationStatuses] = await pool.query('SELECT * FROM lkp_immigration_statuses');
+        const [payTypes] = await pool.query('SELECT * FROM lkp_pay_types');
+        const [clientContactTypes] = await pool.query('SELECT * FROM lkp_client_contact_types');
+        
+        // NEW LOOKUPS
+        const [maritalStatuses] = await pool.query('SELECT * FROM lkp_marital_statuses');
+        const [phoneCodes] = await pool.query('SELECT * FROM lkp_phone_codes');
 
         res.json({
             genders,
             employeeTypes,
             countries,
             immigrationStatuses,
-            payTypes
+            payTypes,
+            maritalStatuses,
+            phoneCodes,
+            clientContactTypes
         });
     } catch (error) {
-        console.error("Lookup fetch error:", error);
         res.status(500).json({ error: error.message });
     }
 };

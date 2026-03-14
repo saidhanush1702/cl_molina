@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, ChevronRight, ChevronLeft, Check, UserPlus } from 'lucide-react';
+import { RefreshCw, ChevronRight, ChevronLeft, Check, UserPlus, AlertTriangle } from 'lucide-react';
 import { managementAPI, commonAPI } from '../../../api/apiService';
 import BaseModal from '../../../components/ui/BaseModal'; 
 
-// Helper to restrict past dates for Immigration Till Date
 const getNextDay = (dateString) => {
     if (!dateString) return undefined;
     const date = new Date(dateString);
@@ -12,25 +11,35 @@ const getNextDay = (dateString) => {
     return date.toISOString().split('T')[0];
 };
 
+const formatSSN = (value) => {
+    const v = value.replace(/\D/g, '').substring(0, 9);
+    const match = v.match(/^(\d{0,3})(\d{0,2})(\d{0,4})$/);
+    if (!match) return v;
+    return !match[2] ? match[1] : `${match[1]}-${match[2]}${match[3] ? `-${match[3]}` : ''}`;
+};
+
 const AddEmployeeModal = ({ isOpen, onClose, onRefresh }) => {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState({}); 
+    const [submitError, setSubmitError] = useState(''); // NEW: Track global submission errors
 
-    // Added lookups state
     const [lookups, setLookups] = useState({ 
         genders: [], 
         employeeTypes: [], 
         countries: [], 
-        immigrationStatuses: [] 
+        immigrationStatuses: [],
+        maritalStatuses: [],
+        phoneCodes: []
     });
 
     const initialFormState = {
         profile: {
             first_name: '', last_name: '', birth_date: '',
-            gender_id: '', marital_status: '', title: '', employee_code: '', 
+            gender_id: '', marital_status_id: '', title: '', employee_code: '', 
             employee_type_id: '', ssn: '', joining_date: '',
-            immigration_status_id: '', immigration_start_date: '', immigration_till_date: '',
-            personal_email: '', phone_number: '', country_id: '', e_verification_code: ''
+            immigration_status_id: '', immigration_start_date: '', immigration_till_date: '', lca_wage: '',
+            personal_email: '', phone_code_id: '', phone_number: '', country_id: '', e_verification_code: ''
         },
         auth: { email: '', password: '' }
     };
@@ -49,7 +58,6 @@ const AddEmployeeModal = ({ isOpen, onClose, onRefresh }) => {
         if (isOpen) {
             const fetchInitialData = async () => {
                 try {
-                    // Fetch code and lookups concurrently
                     const [codeRes, lookupsRes] = await Promise.all([
                         managementAPI.getNextEmployeeCode(),
                         commonAPI.getLookups()
@@ -72,87 +80,157 @@ const AddEmployeeModal = ({ isOpen, onClose, onRefresh }) => {
         } else {
             setFormData(initialFormState);
             setStep(1);
+            setErrors({});
+            setSubmitError('');
         }
     }, [isOpen]);
 
     const updateProfile = (field, value) => {
         setFormData(prev => ({ ...prev, profile: { ...prev.profile, [field]: value } }));
+        if (errors[field]) setErrors(prev => ({ ...prev, [field]: null }));
+        if (submitError) setSubmitError('');
+    };
+
+    const updateAuth = (field, value) => {
+        setFormData(prev => ({ ...prev, auth: { ...prev.auth, [field]: value } }));
+        if (errors[field]) setErrors(prev => ({ ...prev, [field]: null }));
+        if (submitError) setSubmitError('');
     };
 
     const generatePassword = () => {
         const pass = Math.random().toString(36).slice(-10) + "!" + Math.floor(Math.random()*10);
-        setFormData(prev => ({ ...prev, auth: { ...prev.auth, password: pass } }));
+        updateAuth('password', pass);
     };
 
     const validateStep = () => {
+        const newErrors = {};
         const p = formData.profile;
         const a = formData.auth;
-        
-        if (step === 1) return p.first_name && p.last_name && p.birth_date && p.gender_id;
-        if (step === 2) return p.title && p.employee_type_id && p.joining_date && p.ssn;
-        // Safety check to ensure dates make sense
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (step === 1) {
+            if (!p.first_name) newErrors.first_name = "First name is required.";
+            if (!p.last_name) newErrors.last_name = "Last name is required.";
+            if (!p.birth_date) newErrors.birth_date = "Birth date is required.";
+            if (!p.gender_id) newErrors.gender_id = "Gender is required.";
+        }
+        if (step === 2) {
+            if (!p.title) newErrors.title = "Job title is required.";
+            if (!p.employee_type_id) newErrors.employee_type_id = "Job type is required.";
+            if (!p.joining_date) newErrors.joining_date = "Joining date is required.";
+            if (!p.ssn) {
+                newErrors.ssn = "SSN is required.";
+            } else if (p.ssn.length !== 11) {
+                newErrors.ssn = "SSN must be 9 digits (XXX-XX-XXXX).";
+            }
+        }
         if (step === 3) {
             if (p.immigration_start_date && p.immigration_till_date && p.immigration_start_date >= p.immigration_till_date) {
-                alert("Till Date must be strictly after the Start Date.");
-                return false;
+                newErrors.immigration_till_date = "Till Date must be strictly after the Start Date.";
             }
-            return true;
         }
-        if (step === 4) return p.personal_email && p.phone_number && p.country_id && p.e_verification_code;
-        if (step === 5) return a.email && a.password;
-        return true;
+        if (step === 4) {
+            if (!p.personal_email) {
+                newErrors.personal_email = "Personal email is required.";
+            } else if (!emailRegex.test(p.personal_email)) {
+                newErrors.personal_email = "Please enter a valid email address.";
+            }
+            
+            // Country-Specific Phone Validation
+            if (!p.phone_code_id) {
+                newErrors.phone_number = "Country code is required.";
+            } else if (!p.phone_number) {
+                newErrors.phone_number = "Phone number is required.";
+            } else {
+                const selectedCode = lookups.phoneCodes?.find(pc => String(pc.id) === String(p.phone_code_id));
+                if (selectedCode) {
+                    const country = selectedCode.country_name;
+                    const digitsOnly = p.phone_number.replace(/\D/g, ''); // Ensure pure digits
+
+                    if (['Canada', 'United States', 'India'].includes(country) && digitsOnly.length !== 10) {
+                        newErrors.phone_number = `${country} phone numbers must be exactly 10 digits.`;
+                    } else if (country === 'United Kingdom' && (digitsOnly.length < 10 || digitsOnly.length > 11)) {
+                        newErrors.phone_number = "UK phone numbers must be 10 or 11 digits.";
+                    }
+                }
+            }
+
+            if (!p.country_id) newErrors.country_id = "Country of origin is required.";
+            if (!p.e_verification_code) newErrors.e_verification_code = "E-Verification code is required.";
+        }
+        if (step === 5) {
+            if (!a.email) {
+                newErrors.email = "Login email is required.";
+            } else if (!emailRegex.test(a.email)) {
+                newErrors.email = "Please enter a valid email address.";
+            }
+            if (!a.password) newErrors.password = "Password is required.";
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
 
     const handleNext = () => {
-        if (!validateStep()) {
-            if (step !== 3) alert("Please fill in all mandatory fields marked with an asterisk (*) before proceeding.");
-            return;
-        }
+        if (!validateStep()) return;
         setStep(step + 1);
     };
 
+    // UPDATED SUBMIT LOGIC to accurately extract error.message from the backend
     const handleSubmit = async () => {
-        if (!validateStep()) return alert("Please fill in all mandatory fields.");
-        
+        if (!validateStep()) return;
         setLoading(true);
+        setSubmitError(''); // Clear previous errors
         try {
             await managementAPI.addEmployee(formData);
             onRefresh(); 
             onClose();
         } catch (err) { 
-            alert(err.response?.data?.message || "Error creating employee"); 
+            // Extract exact error sent by Node.js backend
+            const backendError = err.response?.data?.error || err.response?.data?.message || err.message || "An unknown error occurred.";
+            setSubmitError(backendError);
         } finally { 
             setLoading(false); 
         }
     };
 
     const modalFooter = (
-        <>
-            <button 
-                disabled={step === 1} 
-                onClick={() => setStep(step - 1)} 
-                className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-[var(--text-muted)] hover:text-[var(--text-main)] disabled:opacity-0 transition-all"
-            >
-                <ChevronLeft size={14}/> Back
-            </button>
-            
-            {step < 5 ? (
-                <button 
-                    onClick={handleNext} 
-                    className="bg-[var(--brand-primary)] text-[var(--brand-primary-text)] px-6 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 shadow-sm hover:opacity-90 active:scale-95 transition-all outline-none"
-                >
-                    Next <ChevronRight size={14}/>
-                </button>
-            ) : (
-                <button 
-                    onClick={handleSubmit} 
-                    disabled={loading} 
-                    className="bg-[var(--brand-primary)] text-[var(--brand-primary-text)] px-6 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 shadow-sm hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 outline-none"
-                >
-                    {loading ? 'Creating...' : 'Finish & Save'} <Check size={14}/>
-                </button>
+        <div className="flex flex-col w-full gap-3">
+            {/* Global Error Banner shown in the footer area */}
+            {submitError && (
+                <div className="w-full bg-red-500/10 border border-red-500/30 text-red-600 px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+                    <AlertTriangle size={14} className="shrink-0" />
+                    <span>{submitError}</span>
+                </div>
             )}
-        </>
+            
+            <div className="flex justify-between w-full">
+                <button 
+                    disabled={step === 1} 
+                    onClick={() => setStep(step - 1)} 
+                    className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-[var(--text-muted)] hover:text-[var(--text-main)] disabled:opacity-0 transition-all outline-none"
+                >
+                    <ChevronLeft size={14}/> Back
+                </button>
+                
+                {step < 5 ? (
+                    <button 
+                        onClick={handleNext} 
+                        className="bg-[var(--brand-primary)] text-[var(--brand-primary-text)] px-6 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 shadow-sm hover:opacity-90 active:scale-95 transition-all outline-none"
+                    >
+                        Next <ChevronRight size={14}/>
+                    </button>
+                ) : (
+                    <button 
+                        onClick={handleSubmit} 
+                        disabled={loading} 
+                        className="bg-[var(--brand-primary)] text-[var(--brand-primary-text)] px-6 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 shadow-sm hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 outline-none"
+                    >
+                        {loading ? 'Creating...' : 'Finish & Save'} <Check size={14}/>
+                    </button>
+                )}
+            </div>
+        </div>
     );
 
     return (
@@ -163,51 +241,83 @@ const AddEmployeeModal = ({ isOpen, onClose, onRefresh }) => {
             headerRight={`Step ${step} of 5`}
             footer={modalFooter}
         >
-            {/* Highly Dense Form Layout using exactly gap-3 */}
             {step === 1 && (
-                <div className="grid grid-cols-2 gap-3">
-                    <FormInput label="First Name*" value={formData.profile.first_name} onChange={v => updateProfile('first_name', v)} />
-                    <FormInput label="Last Name*" value={formData.profile.last_name} onChange={v => updateProfile('last_name', v)} />
-                    <FormInput label="Birth Date*" type="date" value={formData.profile.birth_date} onChange={v => updateProfile('birth_date', v)} />
-                    <FormSelect label="Gender*" isObject={true} options={lookups.genders || []} value={formData.profile.gender_id} onChange={v => updateProfile('gender_id', v)} />
+                <div className="grid grid-cols-2 gap-4">
+                    <FormInput label="First Name*" value={formData.profile.first_name} onChange={v => updateProfile('first_name', v)} error={errors.first_name} />
+                    <FormInput label="Last Name*" value={formData.profile.last_name} onChange={v => updateProfile('last_name', v)} error={errors.last_name} />
+                    <FormInput label="Birth Date*" type="date" value={formData.profile.birth_date} onChange={v => updateProfile('birth_date', v)} error={errors.birth_date} />
+                    <FormSelect label="Gender*" isObject={true} options={lookups.genders || []} value={formData.profile.gender_id} onChange={v => updateProfile('gender_id', v)} error={errors.gender_id} />
                     <div className="col-span-2">
-                        <FormInput label="Marital Status" value={formData.profile.marital_status} onChange={v => updateProfile('marital_status', v)} />
+                        <FormSelect label="Marital Status" isObject={true} options={lookups.maritalStatuses || []} value={formData.profile.marital_status_id} onChange={v => updateProfile('marital_status_id', v)} />
                     </div>
                 </div>
             )}
 
             {step === 2 && (
-                <div className="grid grid-cols-2 gap-3">
-                    <FormInput label="Job Title*" value={formData.profile.title} onChange={v => updateProfile('title', v)} />
-                    <FormSelect label="Job Type*" isObject={true} options={lookups.employeeTypes || []} value={formData.profile.employee_type_id} onChange={v => updateProfile('employee_type_id', v)} />
+                <div className="grid grid-cols-2 gap-4">
+                    <FormInput label="Job Title*" value={formData.profile.title} onChange={v => updateProfile('title', v)} error={errors.title} />
+                    <FormSelect label="Job Type*" isObject={true} options={lookups.employeeTypes || []} value={formData.profile.employee_type_id} onChange={v => updateProfile('employee_type_id', v)} error={errors.employee_type_id} />
                     <FormInput label="Employee Code (Auto-Generated)" value={formData.profile.employee_code} onChange={() => {}} placeholder="Fetching..." readOnly={true} />
-                    <FormInput label="Joining Date*" type="date" value={formData.profile.joining_date} onChange={v => updateProfile('joining_date', v)} />
+                    <FormInput label="Joining Date*" type="date" value={formData.profile.joining_date} onChange={v => updateProfile('joining_date', v)} error={errors.joining_date} />
                     <div className="col-span-2">
-                        <FormInput label="SSN / Tax ID*" type="password" value={formData.profile.ssn} onChange={v => updateProfile('ssn', v)} />
+                        <FormInput label="SSN / Tax ID*" placeholder="XXX-XX-XXXX" maxLength={11} value={formData.profile.ssn} onChange={v => updateProfile('ssn', formatSSN(v))} error={errors.ssn} />
                     </div>
                 </div>
             )}
 
             {step === 3 && (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-4 gap-4">
                     <FormSelect label="Immigration Status" isObject={true} options={lookups.immigrationStatuses || []} value={formData.profile.immigration_status_id} onChange={v => updateProfile('immigration_status_id', v)} />
                     <FormInput label="Start Date" type="date" value={formData.profile.immigration_start_date} onChange={v => updateProfile('immigration_start_date', v)} />
-                    <FormInput label="Till Date" type="date" value={formData.profile.immigration_till_date} min={getNextDay(formData.profile.immigration_start_date)} onChange={v => updateProfile('immigration_till_date', v)} />
+                    <FormInput label="Till Date" type="date" value={formData.profile.immigration_till_date} min={getNextDay(formData.profile.immigration_start_date)} onChange={v => updateProfile('immigration_till_date', v)} error={errors.immigration_till_date} />
+                    <FormInput label="LCA Wage" placeholder="e.g. $85,000" value={formData.profile.lca_wage} onChange={v => updateProfile('lca_wage', v)} />
                 </div>
             )}
 
             {step === 4 && (
-                <div className="grid grid-cols-2 gap-3">
-                    <FormInput label="Personal Email*" value={formData.profile.personal_email} onChange={v => updateProfile('personal_email', v)} />
-                    <FormInput label="Phone Number*" value={formData.profile.phone_number} onChange={v => updateProfile('phone_number', v)} />
-                    <FormSelect label="Country of Origin*" isObject={true} options={lookups.countries || []} value={formData.profile.country_id} onChange={v => updateProfile('country_id', v)} />
-                    <FormInput label="E-Verification Code*" value={formData.profile.e_verification_code} onChange={v => updateProfile('e_verification_code', v)} />
+                <div className="grid grid-cols-2 gap-4">
+                    <FormInput label="Personal Email*" type="email" value={formData.profile.personal_email} onChange={v => updateProfile('personal_email', v)} error={errors.personal_email} maxLength={null} />
+                    
+                    {/* Database-Driven Country Code & Strictly Numbered Phone Input */}
+                    <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">Phone Number*</label>
+                        <div className="flex gap-2">
+                            <select 
+                                className="w-1/3 py-1.5 px-2 bg-[var(--input-bg)] text-[var(--input-text)] border border-[var(--border-subtle)] focus:border-[var(--brand-primary)] rounded-lg text-xs font-bold outline-none"
+                                value={formData.profile.phone_code_id}
+                                onChange={e => {
+                                    updateProfile('phone_code_id', e.target.value);
+                                    updateProfile('phone_number', ''); // Clear number on country change to enforce fresh validation
+                                }}
+                            >
+                                <option value="" disabled>Code</option>
+                                {lookups.phoneCodes?.map(pc => (
+                                    <option key={pc.id} value={pc.id}>{pc.dial_code} ({pc.country_name})</option>
+                                ))}
+                            </select>
+                            <input 
+                                type="text"
+                                maxLength={15}
+                                className={`w-2/3 py-1.5 px-3 bg-[var(--input-bg)] text-[var(--input-text)] border border-[var(--border-subtle)] focus:border-[var(--brand-primary)] rounded-lg text-xs font-bold outline-none transition-all ${errors.phone_number ? 'border-red-500 focus:ring-red-500' : ''}`}
+                                value={formData.profile.phone_number} 
+                                onChange={e => {
+                                    // Strip non-numeric characters automatically
+                                    const onlyNums = e.target.value.replace(/\D/g, '');
+                                    updateProfile('phone_number', onlyNums);
+                                }} 
+                            />
+                        </div>
+                        {errors.phone_number && <p className="text-[10px] text-red-500 font-semibold ml-1">{errors.phone_number}</p>}
+                    </div>
+
+                    <FormSelect label="Country of Origin*" isObject={true} options={lookups.countries || []} value={formData.profile.country_id} onChange={v => updateProfile('country_id', v)} error={errors.country_id} />
+                    <FormInput label="E-Verification Code*" value={formData.profile.e_verification_code} onChange={v => updateProfile('e_verification_code', v)} error={errors.e_verification_code} />
                 </div>
             )}
 
             {step === 5 && (
                 <div className="space-y-4 max-w-md mx-auto py-6">
-                    <FormInput label="Personal Email (Login)*" type="email" value={formData.auth.email} onChange={v => setFormData({...formData, auth: {...formData.auth, email: v}})} />
+                    <FormInput label="Personal Email (Login)*" type="email" value={formData.auth.email} onChange={v => updateAuth('email', v)} error={errors.email} maxLength={null} />
                     <div className="space-y-1">
                         <div className="flex justify-between items-center">
                             <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">Password*</label>
@@ -217,10 +327,12 @@ const AddEmployeeModal = ({ isOpen, onClose, onRefresh }) => {
                         </div>
                         <input 
                             type="text" 
-                            className="w-full py-1.5 px-3 bg-[var(--input-bg)] text-[var(--input-text)] border border-[var(--border-subtle)] focus:border-[var(--brand-primary)] rounded-lg text-xs font-bold outline-none focus:ring-1 focus:ring-[var(--brand-primary)] transition-all placeholder:text-[var(--input-placeholder)]"
+                            maxLength={25}
+                            className={`w-full py-1.5 px-3 bg-[var(--input-bg)] text-[var(--input-text)] border border-[var(--border-subtle)] focus:border-[var(--brand-primary)] rounded-lg text-xs font-bold outline-none focus:ring-1 focus:ring-[var(--brand-primary)] transition-all placeholder:text-[var(--input-placeholder)] ${errors.password ? 'border-red-500 focus:ring-red-500' : ''}`}
                             value={formData.auth.password} 
-                            onChange={e => setFormData({...formData, auth: {...formData.auth, password: e.target.value}})} 
+                            onChange={e => updateAuth('password', e.target.value)} 
                         />
+                        {errors.password && <p className="text-[10px] text-red-500 font-semibold ml-1">{errors.password}</p>}
                     </div>
                 </div>
             )}
@@ -228,9 +340,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onRefresh }) => {
     );
 };
 
-
-
-const FormInput = ({ label, type = "text", value, onChange, placeholder, readOnly = false, min }) => (
+const FormInput = ({ label, type = "text", value, onChange, placeholder, readOnly = false, min, maxLength = 25, error }) => (
     <div className="space-y-1">
         <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">{label}</label>
         <input 
@@ -238,23 +348,30 @@ const FormInput = ({ label, type = "text", value, onChange, placeholder, readOnl
             placeholder={placeholder}
             readOnly={readOnly}
             min={min}
-            className={`w-full py-1.5 px-3 bg-[var(--input-bg)] text-[var(--input-text)] border border-[var(--border-subtle)] rounded-lg text-xs font-bold outline-none transition-all ${
+            maxLength={type === "email" ? undefined : maxLength} 
+            className={`w-full py-1.5 px-3 bg-[var(--input-bg)] text-[var(--input-text)] border rounded-lg text-xs font-bold outline-none transition-all ${
                 readOnly 
-                ? 'opacity-60 cursor-not-allowed bg-[var(--bg-app)]' 
-                : 'focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]'
+                ? 'opacity-60 cursor-not-allowed bg-[var(--bg-app)] border-[var(--border-subtle)]' 
+                : error 
+                    ? 'border-red-500 focus:ring-1 focus:ring-red-500 focus:border-red-500' 
+                    : 'border-[var(--border-subtle)] focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]'
             }`}
             value={value} 
             onChange={e => onChange && onChange(e.target.value)} 
         />
+        {error && <p className="text-[10px] text-red-500 font-semibold ml-1">{error}</p>}
     </div>
 );
 
-// Updated FormSelect to handle arrays of objects
-const FormSelect = ({ label, options, value, onChange, isObject = false }) => (
+const FormSelect = ({ label, options, value, onChange, isObject = false, error }) => (
     <div className="space-y-1">
         <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">{label}</label>
         <select 
-            className="w-full py-1.5 px-3 bg-[var(--input-bg)] text-[var(--input-text)] border border-[var(--border-subtle)] focus:border-[var(--brand-primary)] rounded-lg text-xs font-bold outline-none focus:ring-1 focus:ring-[var(--brand-primary)] transition-all"
+            className={`w-full py-1.5 px-3 bg-[var(--input-bg)] text-[var(--input-text)] border rounded-lg text-xs font-bold outline-none transition-all ${
+                error 
+                    ? 'border-red-500 focus:ring-1 focus:ring-red-500 focus:border-red-500' 
+                    : 'border-[var(--border-subtle)] focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]'
+            }`}
             value={value || ''} 
             onChange={e => onChange(e.target.value)}
         >
@@ -265,6 +382,7 @@ const FormSelect = ({ label, options, value, onChange, isObject = false }) => (
                 </option>
             ))}
         </select>
+        {error && <p className="text-[10px] text-red-500 font-semibold ml-1">{error}</p>}
     </div>
 );
 
